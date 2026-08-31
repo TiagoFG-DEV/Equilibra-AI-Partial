@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🤖 MODEL — Headless AI Chatbot Platform
+# MODEL — Headless AI Chatbot Platform
 
 **A powerful, SaaS-ready, Headless AI Chatbot Framework trainable entirely via JSON skills.**  
 *Zero UI lockdown, dynamic DOM scanner, multi-provider LLM support, native Web Grounding & deterministic guardrails.*
@@ -15,19 +15,19 @@
 
 <br/>
 
-[✨ Funcionalidades](#-principais-funcionalidades) •
-[🏗️ Arquitetura](#️-arquitetura-do-sistema) •
-[🚀 Como Começar](#-como-começar-passo-a-passo) •
-[🧠 Treinamento via JSON](#-como-treinar-o-chatbot-via-json) •
-[🔌 Integração Headless](#-integração-headless-no-seu-site) •
-[🎨 Exemplos Prontos](#-exemplos-visuais-incluídos) •
-[📬 Contato](#-autor--contato)
+[Funcionalidades](#principais-funcionalidades) •
+[Arquitetura](#arquitetura-do-sistema) •
+[Como Começar](#como-começar-passo-a-passo) •
+[Treinamento via JSON](#como-treinar-o-chatbot-via-json) •
+[Integração Headless](#integração-headless-no-seu-site) •
+[Exemplos Prontos](#exemplos-visuais-incluídos) •
+[Contato](#autor--contato)
 
 ---
 
 </div>
 
-## 🌟 O Que é o MODEL?
+## O Que é o MODEL?
 
 O **MODEL** é uma plataforma e framework de Chatbots inteligentes desenhado para máxima flexibilidade e desacoplamento. 
 
@@ -38,21 +38,21 @@ Ao contrário dos widgets convencionais que obrigam o uso de `<iframe>` ou temas
 
 ---
 
-## ✨ Principais Funcionalidades
+## Principais Funcionalidades
 
 | Recurso | Descrição |
 | :--- | :--- |
-| 🧩 **100% Headless (DOM Scanner)** | Sem iframes, sem estilos forçados. O chatbot adapta-se transparentemente ao design de qualquer página web. |
-| 📄 **Treinamento Declarativo via JSON** | Defina personas, tom de voz, tópicos permitidos/bloqueados, limites de tokens e temperatura em arquivos `.skill.json`. |
-| 🌐 **Multi-Provider LLM & Web Grounding** | Suporte nativo para **Google Gemini** (com Google Search ativo para pesquisa em tempo real), **OpenAI** (GPT-4o), **Groq** (Llama 3.1 ultra-rápido) e **Ollama** (modelos locais). |
-| 🛡️ **DomainGate & Proteção Anti-Jailbreak** | Validação determinística de domínio antes de chamar a IA, bloqueando injeções de prompt, tópicos proibidos e ataques. |
-| ⚡ **Streaming em Tempo Real (SSE)** | Respostas transmitidas token a token com latência mínima para o usuário final. |
-| 🏢 **SaaS Multi-Tenant Ready** | Modelagem robusta no PostgreSQL com Prisma ORM (Tenants, Bots, Usuários, Conversas, Mensagens e Autenticação JWT). |
-| 📦 **Monorepo Modular em TypeScript** | Pacote determinístico `@model/core` compartilhado com schemas Zod, orquestrador no backend e scripts de cliente. |
+| **100% Headless (DOM Scanner)** | Sem iframes, sem estilos forçados. O chatbot adapta-se transparentemente ao design de qualquer página web. |
+| **Treinamento Declarativo via JSON** | Defina personas, tom de voz, tópicos permitidos/bloqueados, limites de tokens e temperatura em arquivos `.skill.json`. |
+| **Multi-Provider LLM & Web Grounding** | Suporte nativo para **Google Gemini** (com Google Search ativo para pesquisa em tempo real), **OpenAI** (GPT-4o), **Groq** (Llama 3.1 ultra-rápido) e **Ollama** (modelos locais). |
+| **DomainGate & Proteção Anti-Jailbreak** | Validação determinística de domínio antes de chamar a IA, bloqueando injeções de prompt, tópicos proibidos e ataques. |
+| **Streaming em Tempo Real (SSE)** | Respostas transmitidas token a token com latência mínima para o usuário final. |
+| **SaaS Multi-Tenant Ready** | Modelagem robusta no PostgreSQL com Prisma ORM (Tenants, Bots, Usuários, Conversas, Mensagens e Autenticação JWT). |
+| **Monorepo Modular em TypeScript** | Pacote determinístico `@model/core` compartilhado com schemas Zod, orquestrador no backend e scripts de cliente. |
 
 ---
 
-## 🏗️ Arquitetura do Sistema
+## Arquitetura do Sistema
 
 O projeto é estruturado em um **Monorepo** moderno:
 
@@ -113,7 +113,7 @@ sequenceDiagram
 
 ---
 
-## 🧠 Como Treinar o Chatbot via JSON
+## Como Treinar o Chatbot via JSON
 
 Para criar um novo especialista ou alterar a inteligência de um bot existente, basta adicionar ou editar um arquivo `.skill.json` dentro da pasta `skills/`:
 
@@ -180,7 +180,7 @@ Para criar um novo especialista ou alterar a inteligência de um bot existente, 
 
 ---
 
-## 🔌 Integração Headless no seu Site
+## Integração Headless no seu Site
 
 Integre em **qualquer página web** em 3 passos simples:
 
@@ -217,19 +217,19 @@ Integre em **qualquer página web** em 3 passos simples:
 
 ---
 
-## 🎨 Exemplos Visuais Incluídos
+## Exemplos Visuais Incluídos
 
 Na pasta `docs/` você encontrará 3 implementações completas com designs radicalmente diferentes usando a mesma API:
 
 | Exemplo | Estilo Visual | Persona & Skill |
 | :--- | :--- | :--- |
-| **RoboKids** | Discord / Dark / Neon | 🤖 `educational-robotics.skill.json` |
-| **Mão na Massa** | Blog Gourmet / Aconchegante | 🍳 `culinary.skill.json` |
-| **IronWorks** | Terminal Industrial Brutalista | ⚙️ `industrial-mechanics.skill.json` |
+| **RoboKids** | Discord / Dark / Neon | `educational-robotics.skill.json` |
+| **Mão na Massa** | Blog Gourmet / Aconchegante | `culinary.skill.json` |
+| **IronWorks** | Terminal Industrial Brutalista | `industrial-mechanics.skill.json` |
 
 ---
 
-## 🚀 Como Começar (Passo a Passo)
+## Como Começar (Passo a Passo)
 
 ### Pré-requisitos
 - **Node.js** `>= 20.0.0`
@@ -284,7 +284,7 @@ npm run dev:backend
 
 ---
 
-## 🛠️ Scripts Disponíveis
+## Scripts Disponíveis
 
 Na raiz do monorepo:
 
@@ -298,7 +298,7 @@ Na raiz do monorepo:
 
 ---
 
-## 🗺️ Roadmap de Evolução
+## Roadmap de Evolução
 
 - [x] Arquitetura Headless com DOM Scanner (`widget.js`)
 - [x] Treinamento de habilidades via arquivos `.skill.json`
@@ -311,7 +311,7 @@ Na raiz do monorepo:
 
 ---
 
-## 📬 Autor & Contato
+## Autor & Contato
 
 Desenvolvido por **Tiago Gregorio (TiagoFG-DEV)**.
 
@@ -322,5 +322,5 @@ Desenvolvido por **Tiago Gregorio (TiagoFG-DEV)**.
 ---
 
 <div align="center">
-  <sub>Construído com foco em flexibilidade, desempenho e arquitetura limpa. ⭐ Se este projeto foi útil para você, considere deixar uma estrela no repositório!</sub>
+  <sub>Construído com foco em flexibilidade, desempenho e arquitetura limpa. Se este projeto foi útil para você, considere deixar uma estrela no repositório!</sub>
 </div>
