@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Técnico - IronWorks</title>
+    <style>
+        body { font-family: 'Consolas', 'Monaco', monospace; background: #1a1a1a; margin: 0; color: #f1c40f; display: flex; height: 100vh; flex-direction: column; }
+        header { background: #f1c40f; color: #1a1a1a; padding: 10px 20px; font-weight: 900; border-bottom: 4px solid #d35400; display: flex; justify-content: space-between; }
+        .container { display: flex; flex: 1; overflow: hidden; padding: 0; }
+        
+        /* ESTILO MECÂNICA - Industrial e Rígido */
+        .mechanic-chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #222;
+            border: 2px solid #333;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #1a1a1a;
+            background-image: linear-gradient(#222 1.1px, transparent 1.1px), linear-gradient(90deg, #222 1.1px, transparent 1.1px);
+            background-size: 30px 30px;
+        }
+
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
+        .msg-wrapper[data-saas-message-role="user"] { align-self: flex-end; }
+
+        .msg-avatar { display: none; } /* Sem avatars em interface industrial */
+        
+        .msg-content { padding: 12px 18px; border: 1px solid #444; font-size: 14px; position: relative; }
+        
+        /* Mensagem da IA */
+        .ai-msg .msg-content { 
+            background: #000; 
+            color: #00ff00; /* Cor de terminal antigo */
+            border-left: 5px solid #f1c40f;
+            box-shadow: 0 0 10px rgba(0,255,0,0.1);
+        }
+        .ai-msg::before { content: "[SISTEMA_CONSULTA]:"; font-size: 10px; margin-bottom: 5px; color: #f1c40f; }
+
+        /* Mensagem do Usuário */
+        [data-saas-message-role="user"] .msg-content { 
+            background: #333; 
+            color: #fff; 
+            border-right: 5px solid #d35400;
+            text-align: right;
+        }
+        [data-saas-message-role="user"]::after { content: "[OPERADOR_LOG]:"; font-size: 10px; margin-top: 5px; color: #d35400; align-self: flex-end; }
+
+        .chat-input-area { padding: 15px; background: #111; border-top: 2px solid #f1c40f; display: flex; gap: 0; }
+        .chat-input-area input { flex: 1; padding: 15px; background: #000; color: #f1c40f; border: 1px solid #333; outline: none; font-family: inherit; }
+        .chat-input-area button { background: #f1c40f; color: #000; border: none; padding: 0 30px; cursor: pointer; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
+        .chat-input-area button:hover:not(:disabled) { background: #fff; }
+        .chat-input-area button:disabled { background: #444; color: #666; cursor: not-allowed; }
+
+        .system-status { font-size: 11px; padding: 10px; background: #000; border-bottom: 1px solid #333; color: #666; }
+    </style>
+</head>
+<body>
+    <header>
+        <span>STATUS: CONECTADO | PAINEL_IRONWORKS_v2.4</span>
+        <a href="/" style="color:black; text-decoration:none">ENCERRAR SESSÃO</a>
+    </header>
+
+    <div class="system-status">
+        <ctrl94> CARREGANDO MÓDULOS DE DIAGNÓSTICO... OK<br>
+        > VERIFICANDO SENSORES INDUSTRIAIS... OK<br>
+        > PROTOCOLO DE CONSULTA ATIVO.
+    </div>
+
+    <div class="container">
+        <div class="mechanic-chat-container" data-saas-container>
+            <div class="chat-messages" data-saas-messages>
+                <!-- TEMPLATES HEADLESS -->
+                <div class="msg-wrapper" data-saas-template-user>
+                    <div class="msg-content" data-saas-content></div>
+                </div>
+                <div class="msg-wrapper ai-msg" data-saas-template-ai>
+                    <div class="msg-content" data-saas-content></div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" placeholder="INSIRA COMANDO OU DÚVIDA TÉCNICA..." data-saas-input disabled>
+                <button data-saas-send disabled>EXECUTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT SAAS -->
+    <script src="http://localhost:4000/widget.js" data-skill="industrial-mechanics"></script>
+</body>
+</html>

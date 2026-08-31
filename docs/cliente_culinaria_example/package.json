@@ -1,0 +1,12 @@
+{
+  "name": "cliente_culinaria_example",
+  "version": "1.0.0",
+  "description": "Exemplo de site de culinária usando o SaaS Chatbot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

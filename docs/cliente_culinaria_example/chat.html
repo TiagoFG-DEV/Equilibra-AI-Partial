@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat com o Chef - Mão na Massa</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fdf6e3; margin: 0; display: flex; height: 100vh; flex-direction: column; }
+        header { background: #e67e22; color: white; padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        
+        /* ESTILO CULINÁRIA - Confortável e Quente */
+        .culinary-chat-container {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eee8d5;
+            box-shadow: 0 10px 30px rgba(93, 64, 55, 0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-image: radial-gradient(#eee8d5 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .msg-wrapper { display: flex; gap: 15px; align-items: flex-end; }
+        .msg-wrapper[data-saas-message-role="user"] { flex-direction: row-reverse; }
+
+        .msg-avatar { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #eee8d5; }
+        
+        .msg-content { padding: 15px 20px; border-radius: 18px; max-width: 70%; line-height: 1.6; font-size: 15px; position: relative; }
+        
+        /* Estilo do Chef (IA) */
+        .ai-msg .msg-content { background: #fff3e0; color: #5d4037; border: 1px solid #ffe0b2; border-bottom-left-radius: 2px; }
+        .ai-msg .msg-avatar { background: #e67e22; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* Estilo do Usuário */
+        [data-saas-message-role="user"] .msg-content { background: #d35400; color: white; border-bottom-right-radius: 2px; }
+
+        .chat-input-area { padding: 20px; border-top: 1px solid #eee8d5; display: flex; gap: 10px; background: #fffbf0; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+        .chat-input-area input { flex: 1; padding: 15px; border-radius: 25px; border: 2px solid #eee8d5; outline: none; font-size: 15px; transition: 0.3s; }
+        .chat-input-area input:focus { border-color: #e67e22; }
+        .chat-input-area button { background: #d35400; color: white; border: none; padding: 0 25px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .chat-input-area button:hover:not(:disabled) { background: #e67e22; transform: scale(1.05); }
+        .chat-input-area button:disabled { background: #ccc; cursor: not-allowed; }
+
+        .recipe-tip { background: #fdf6e3; border-left: 4px solid #e67e22; padding: 15px; border-radius: 8px; font-size: 14px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h2 style="margin:0">👨‍🍳 Chef Virtual Mão na Massa</h2>
+        <a href="/" style="color:white; text-decoration:none">Voltar ao site</a>
+    </header>
+
+    <div class="container">
+        <div class="culinary-chat-container" data-saas-container>
+            <div class="chat-messages" data-saas-messages>
+                <!-- TEMPLATES HEADLESS -->
+                <div class="msg-wrapper" data-saas-template-user>
+                    <div class="msg-avatar">👤</div>
+                    <div class="msg-content" data-saas-content></div>
+                </div>
+                <div class="msg-wrapper ai-msg" data-saas-template-ai>
+                    <div class="msg-avatar">👨‍🍳</div>
+                    <div class="msg-content" data-saas-content></div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" placeholder="Pergunte uma receita ou técnica..." data-saas-input disabled>
+                <button data-saas-send disabled>Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT SAAS -->
+    <script src="http://localhost:4000/widget.js" data-skill="culinary"></script>
+</body>
+</html>

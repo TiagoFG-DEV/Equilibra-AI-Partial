@@ -1,0 +1,12 @@
+{
+  "name": "cliente_site_exemple",
+  "version": "1.0.0",
+  "description": "Simulação de site de robótica juvenil que consome o Widget SaaS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

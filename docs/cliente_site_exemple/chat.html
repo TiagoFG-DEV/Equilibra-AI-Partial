@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Chat com o Professor - RoboKids</title>
+  <style>
+    /* RESET & FONT */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0c;
+      color: #e0e0e0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR (Menu Lateral) */
+    .sidebar {
+      width: 280px;
+      background: linear-gradient(180deg, #16181d 0%, #0d0f12 100%);
+      border-right: 1px solid #1f2329;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      font-size: 28px;
+      background: rgba(0, 255, 136, 0.1);
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .brand h1 {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .brand span {
+      color: #00ff88;
+    }
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: auto;
+    }
+
+    .nav-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: #a0a5b1;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .nav-item.active {
+      background: rgba(0, 255, 136, 0.1);
+      color: #00ff88;
+      border-left: 3px solid #00ff88;
+    }
+
+    .sidebar-info {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .sidebar-info strong {
+      color: #ccc;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    /* MAIN CONTENT (Área do Chat) */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.03)"/></svg>');
+      position: relative;
+    }
+
+    .top-header {
+      padding: 20px 30px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 10, 12, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 5;
+    }
+
+    .top-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top-header h2::before {
+      content: '';
+      display: block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 8px #00ff88;
+    }
+
+    /* ESTILO CUSTOMIZADO DO CLIENTE (Discord-like / Modern) */
+    .discord-chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 30px 40px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      scroll-behavior: smooth;
+    }
+
+    /* Custom Scrollbar */
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 10px; }
+    .chat-messages::-webkit-scrollbar-thumb:hover { background: #3a3d45; }
+
+    .msg-wrapper {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .msg-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #2b2d31;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #fff;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .msg-content {
+      background: #2b2d31;
+      color: #dbdee1;
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 12px;
+      font-size: 15px;
+      line-height: 1.6;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* Estilo Especial da IA - Fundo preto e Borda NEON */
+    .msg-wrapper.ai-msg .msg-avatar {
+      background: #0a0a0c;
+      border: 1px solid #00ff88;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+      font-size: 20px;
+    }
+
+    .msg-wrapper.ai-msg .msg-content {
+      background: #0a0a0c;
+      color: #00ff88;
+      border: 1px solid rgba(0, 255, 136, 0.4);
+      border-radius: 12px 12px 12px 0;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.1);
+      text-shadow: 0 0 1px rgba(0, 255, 136, 0.5);
+    }
+
+    /* Área de Input */
+    .chat-input-area {
+      padding: 0 40px 30px 40px;
+      background: linear-gradient(to top, #0a0a0c 60%, transparent);
+      display: flex;
+      justify-content: center;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      background: #1e1f22;
+      padding: 8px 8px 8px 20px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 800px;
+      border: 1px solid #383a40;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      transition: border-color 0.3s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #00ff88;
+      box-shadow: 0 8px 24px rgba(0, 255, 136, 0.1);
+    }
+
+    .input-wrapper input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .input-wrapper input::placeholder {
+      color: #6d6f78;
+    }
+
+    .input-wrapper button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-wrapper button:hover:not(:disabled) {
+      background: #00cc6a;
+      transform: translateY(-1px);
+    }
+
+    .input-wrapper button:disabled {
+      background: #2b2d31;
+      color: #6d6f78;
+      cursor: not-allowed;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR LATERAL -->
+  <aside class="sidebar">
+    <a href="/" class="brand">
+      <div class="brand-icon">🤖</div>
+      <h1>RoboKids <span>Academy</span></h1>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="/" class="nav-item">🏠 Página Inicial</a>
+      <a href="#" class="nav-item">📚 Meus Cursos</a>
+      <a href="#" class="nav-item">⚙️ Projetos</a>
+      <a href="#" class="nav-item active">💬 Suporte IA</a>
+    </nav>
+
+    <div class="sidebar-info">
+      <strong>Modo Headless Ativo</strong>
+      Este layout é 100% construído pelo cliente. O SaaS funciona nos bastidores mapeando os atributos <code>data-saas-*</code> para gerenciar o stream de respostas.
+    </div>
+  </aside>
+
+  <!-- ÁREA PRINCIPAL -->
+  <main class="main-content">
+    
+    <header class="top-header">
+      <h2>Professor Digital Online</h2>
+    </header>
+
+    <!-- AREA DE IMPLEMENTACAO DO PROJETO SAAS (MODO HEADLESS) -->
+    <div class="discord-chat-container" data-saas-container>
+
+      <!-- Onde as mensagens vão aparecer -->
+      <div class="chat-messages" data-saas-messages>
+
+        <!-- TEMPLATE: Mensagem do Usuário -->
+        <div class="msg-wrapper" data-saas-template-user>
+          <div class="msg-avatar">U</div>
+          <div class="msg-content" data-saas-content></div>
+        </div>
+
+        <!-- TEMPLATE: Mensagem da IA (Neon Verde) -->
+        <div class="msg-wrapper ai-msg" data-saas-template-ai>
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-content" data-saas-content></div>
+        </div>
+
+      </div>
+
+      <!-- Área de Input -->
+      <div class="chat-input-area">
+        <div class="input-wrapper">
+          <input type="text" placeholder="Faça uma pergunta sobre robótica..." data-saas-input disabled>
+          <button data-saas-send disabled>
+            Enviar
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Importando a lógica do Widget SaaS -->
+  <script src="http://localhost:4000/widget.js" data-skill="educational-robotics"></script>
+
+</body>
+
+</html>
