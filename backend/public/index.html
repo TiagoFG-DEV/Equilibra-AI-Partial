@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equilibra IA — Gestão de Riscos Psicossociais NR-1 & Governança LGPD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- HEADER INSTITUCIONAL -->
+  <header class="header-bar">
+    <div class="brand-wrapper">
+      <div class="brand-badge">EQ</div>
+      <div class="brand-text">
+        <h1>Equilibra — Gestão de Riscos Psicossociais</h1>
+        <p>Monitoramento Contínuo conforme a Norma Regulamentadora nº 1 (NR-1)</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <div class="compliance-badge">
+        <span class="dot-indicator"></span>
+        <span>LGPD: k-Anonimato & Expurgo Ativos</span>
+      </div>
+      <div class="compliance-badge">
+        <span>IA: Groq / Multi-Provider</span>
+      </div>
+      <a href="/conectar-whatsapp.html" style="background: #25d366; color: #0b141a; text-decoration: none; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700; transition: opacity 0.15s;">
+        Conectar WhatsApp Real
+      </a>
+      <a href="/whatsapp.html" style="background: #0284c7; color: #fff; text-decoration: none; padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600; transition: background 0.15s;">
+        Simulador WhatsApp
+      </a>
+    </div>
+  </header>
+
+  <!-- CONTAINER PRINCIPAL -->
+  <main class="app-container">
+    
+    <!-- PAINEL ESQUERDO: SIMULAÇÃO DO CHATBOT DE ESCUTA -->
+    <section class="card-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>Canal de Escuta Confidencial</span>
+          <span class="panel-title-tag">Somente Coleta</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);">
+          Identidade Protegida
+        </div>
+      </div>
+
+      <!-- CONTROLES DO DEPARTAMENTO E SESSÕES -->
+      <div class="sim-controls">
+        <div class="control-group">
+          <label for="deptSelect" class="control-label">Departamento:</label>
+          <select id="deptSelect" class="control-select">
+            <option value="Operações">Operações</option>
+            <option value="Comercial">Comercial / Vendas</option>
+            <option value="Tecnologia">Tecnologia / TI</option>
+            <option value="Atendimento">Atendimento / Suporte</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <span class="control-label">Sessão:</span>
+          <div class="session-pills" id="sessionPillsContainer">
+            <button class="session-btn active" data-session="colab-1">Colaborador #1</button>
+            <button class="session-btn" data-session="colab-2">Colaborador #2</button>
+            <button class="session-btn" data-session="colab-3">Colaborador #3</button>
+            <button class="session-btn" id="btnAddSession">+ Novo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RASTREADOR DE FATORES DA NR-1 -->
+      <div class="factors-tracker" id="factorsTracker">
+        <span class="factor-step-tag active" data-step="0">1. Demandas</span>
+        <span class="factor-step-tag" data-step="1">2. Autonomia</span>
+        <span class="factor-step-tag" data-step="2">3. Liderança</span>
+        <span class="factor-step-tag" data-step="3">4. Clima</span>
+        <span class="factor-step-tag" data-step="4">5. Reconhecimento</span>
+        <span class="factor-step-tag" data-step="5">6. Assédio</span>
+        <span class="factor-step-tag" data-step="6">7. Soluções</span>
+        <span class="factor-step-tag" data-step="7">8. Denúncia</span>
+      </div>
+
+      <!-- ÁREA DE MENSAGENS DO CHAT -->
+      <div class="chat-window" id="chatWindow">
+        <!-- Injetado dinamicamente -->
+      </div>
+
+      <!-- BARRA DE SELEÇÃO RÁPIDA DE NOTA MÉTRICA (0 A 10) -->
+      <div class="metric-buttons-bar">
+        <span class="metric-bar-label">Confirmar Nota:</span>
+        <button class="metric-chip" data-score="0">0</button>
+        <button class="metric-chip" data-score="1">1</button>
+        <button class="metric-chip" data-score="2">2</button>
+        <button class="metric-chip" data-score="3">3</button>
+        <button class="metric-chip" data-score="4">4</button>
+        <button class="metric-chip" data-score="5">5</button>
+        <button class="metric-chip" data-score="6">6</button>
+        <button class="metric-chip" data-score="7">7</button>
+        <button class="metric-chip" data-score="8">8</button>
+        <button class="metric-chip" data-score="9">9</button>
+        <button class="metric-chip" data-score="10">10</button>
+      </div>
+
+      <!-- ENTRADA DE TEXTO -->
+      <form class="chat-input-bar" id="chatForm">
+        <input 
+          type="text" 
+          id="chatInput" 
+          class="chat-input" 
+          placeholder="Digite sua resposta, desabafo ou confirme sua nota..." 
+          autocomplete="off" 
+        />
+        <button type="submit" class="btn-send" id="btnSend">Enviar</button>
+      </form>
+
+      <!-- CENÁRIOS DE TESTE RÁPIDO -->
+      <div class="scenarios-toolbar">
+        <span class="toolbar-label">Testes de Comportamento:</span>
+        <button class="scenario-pill" id="scenarioGood">Cenário Regular (Nota 8)</button>
+        <button class="scenario-pill" id="scenarioRant">Cenário Desabafo / Sobrecarga</button>
+        <button class="scenario-pill" id="scenarioCrisis">Cenário Protocolo de Crise</button>
+        <button class="scenario-pill" id="scenarioOutOfDomain">Cenário Desvio de Foco</button>
+      </div>
+    </section>
+
+    <!-- PAINEL DIREITO: CONSOLIDAÇÃO COLETIVA & RELATÓRIO NR-1 -->
+    <section class="card-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>Governança Coletiva & Relatório NR-1</span>
+          <span class="panel-title-tag">Visão RH</span>
+        </div>
+        <button class="btn-print" id="btnPrintReport">Imprimir / Salvar PDF</button>
+      </div>
+
+      <div class="report-panel-body" id="reportPanelBody">
+        <!-- BANNER DE STATUS DO CICLO -->
+        <div class="consolidation-hero">
+          <div class="hero-stats">
+            <h3 id="heroDeptTitle">Ciclo Atual: Departamento de Operações</h3>
+            <p id="heroDeptStats">Participantes ativos neste ciclo: <strong id="activeSessionsCount">0</strong> colaborador(es).</p>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              * A consolidação compila as notas objetivas, extrai temas coletivos da IA e executa o expurgo total das conversas individuais.
+            </p>
+          </div>
+          <button class="btn-consolidate" id="btnConsolidate">
+            Consolidar e Expurgo
+          </button>
+        </div>
+
+        <!-- CONTAINER DO RELATÓRIO EXECUTIVO GERADO -->
+        <div id="reportContainer">
+          <div class="report-card" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
+            <p>Conduza uma ou mais conversas na aba de escuta e clique em <strong>"Consolidar e Expurgo"</strong> para gerar o relatório coletivo da NR-1 com expurgo imediato dos registros brutos.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // --- ESTADO DA APLICAÇÃO ---
+    let currentDepartment = "Operações";
+    let currentSessionId = "colab-1";
+    let activeSessionsList = ["colab-1", "colab-2", "colab-3"];
+    let sessionHistories = {};
+
+    // Elementos DOM
+    const chatWindow = document.getElementById("chatWindow");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const deptSelect = document.getElementById("deptSelect");
+    const sessionPillsContainer = document.getElementById("sessionPillsContainer");
+    const factorsTracker = document.getElementById("factorsTracker");
+    const btnConsolidate = document.getElementById("btnConsolidate");
+    const activeSessionsCountEl = document.getElementById("activeSessionsCount");
+    const heroDeptTitle = document.getElementById("heroDeptTitle");
+    const reportContainer = document.getElementById("reportContainer");
+    const btnPrintReport = document.getElementById("btnPrintReport");
+
+    // Inicialização
+    window.addEventListener("DOMContentLoaded", () => {
+      initSession(currentSessionId);
+      updateStatusCounter();
+    });
+
+    // Mudança de departamento
+    deptSelect.addEventListener("change", (e) => {
+      currentDepartment = e.target.value;
+      heroDeptTitle.textContent = `Ciclo Atual: Departamento de ${currentDepartment}`;
+      updateStatusCounter();
+      initSession(currentSessionId, true);
+    });
+
+    // Alternar sessão de colaborador
+    sessionPillsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest(".session-btn");
+      if (!btn || btn.id === "btnAddSession") return;
+
+      document.querySelectorAll(".session-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentSessionId = btn.getAttribute("data-session");
+      renderSessionChat(currentSessionId);
+    });
+
+    // Adicionar nova sessão de colaborador
+    document.getElementById("btnAddSession").addEventListener("click", () => {
+      const newId = `colab-${activeSessionsList.length + 1}`;
+      activeSessionsList.push(newId);
+      
+      const newBtn = document.createElement("button");
+      newBtn.className = "session-btn";
+      newBtn.setAttribute("data-session", newId);
+      newBtn.textContent = `Colaborador #${activeSessionsList.length}`;
+      
+      sessionPillsContainer.insertBefore(newBtn, document.getElementById("btnAddSession"));
+      newBtn.click();
+    });
+
+    // Inicializar ou restaurar sessão (A IA sempre inicia e faz a primeira pergunta)
+    async function initSession(sessionId, forceReset = false) {
+      if (!sessionHistories[sessionId] || forceReset) {
+        sessionHistories[sessionId] = [];
+        try {
+          const res = await fetch("/api/equilibra/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              department: currentDepartment
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            sessionHistories[sessionId].push({
+              role: "assistant",
+              content: data.reply
+            });
+            updateTrackerStep(data.step);
+          }
+        } catch (err) {
+          console.error("Erro ao iniciar sessão pela IA:", err);
+        }
+      }
+      renderSessionChat(sessionId);
+    }
+
+    // Renderizar mensagens no chat
+    function renderSessionChat(sessionId) {
+      chatWindow.innerHTML = "";
+      const history = sessionHistories[sessionId] || [];
+
+      history.forEach(item => {
+        const bubble = document.createElement("div");
+        const isCrisis = item.content.includes("188") && item.content.includes("SAMU");
+        bubble.className = `chat-bubble ${item.role} ${isCrisis ? "crisis-alert" : ""}`;
+        
+        const sender = document.createElement("div");
+        sender.className = "chat-bubble-sender";
+        sender.textContent = item.role === "assistant" ? "Equilibra RH (Confidencial)" : "Você (Colaborador)";
+        
+        const text = document.createElement("div");
+        text.style.whiteSpace = "pre-wrap";
+        text.textContent = item.content;
+
+        bubble.appendChild(sender);
+        bubble.appendChild(text);
+        chatWindow.appendChild(bubble);
+      });
+
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Atualizar tracker visual de etapas
+    function updateTrackerStep(step) {
+      const tags = factorsTracker.querySelectorAll(".factor-step-tag");
+      tags.forEach((tag, idx) => {
+        tag.classList.remove("active");
+        if (idx < step) {
+          tag.classList.add("completed");
+        } else if (idx === step) {
+          tag.classList.add("active");
+        }
+      });
+    }
+
+    // Envio de mensagem
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      chatInput.value = "";
+      await sendMessage(text);
+    });
+
+    // Enviar mensagem para a API
+    async function sendMessage(text) {
+      if (!sessionHistories[currentSessionId]) {
+        sessionHistories[currentSessionId] = [];
+      }
+      sessionHistories[currentSessionId].push({ role: "user", content: text });
+      renderSessionChat(currentSessionId);
+
+      try {
+        const res = await fetch("/api/equilibra/message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: currentSessionId,
+            department: currentDepartment,
+            message: text
+          })
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          sessionHistories[currentSessionId].push({
+            role: "assistant",
+            content: data.reply
+          });
+          updateTrackerStep(data.step);
+          updateStatusCounter();
+        } else {
+          sessionHistories[currentSessionId].push({
+            role: "assistant",
+            content: "Ocorreu uma instabilidade momentânea na coleta. Por favor, tente novamente."
+          });
+        }
+      } catch (err) {
+        sessionHistories[currentSessionId].push({
+          role: "assistant",
+          content: "Erro de comunicação com o servidor de escuta."
+        });
+      }
+
+      renderSessionChat(currentSessionId);
+    }
+
+    // Botões rápidos de métrica (0 a 10)
+    document.querySelectorAll(".metric-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const score = chip.getAttribute("data-score");
+        sendMessage(`Nota ${score}`);
+      });
+    });
+
+    // Botões de cenários de teste
+    document.getElementById("scenarioGood").addEventListener("click", () => {
+      sendMessage("O ambiente tem fluído bem e considero equilibrado. Minha nota é 8.");
+    });
+
+    document.getElementById("scenarioRant").addEventListener("click", () => {
+      sendMessage("Temos enfrentado muita correria e prazos que mudam toda hora sem planejamento, o que tem gerado muito cansaço na equipe.");
+    });
+
+    document.getElementById("scenarioCrisis").addEventListener("click", () => {
+      sendMessage("Estou em desespero total e pensando em tirar minha vida.");
+    });
+
+    document.getElementById("scenarioOutOfDomain").addEventListener("click", () => {
+      sendMessage("Quem você acha que vai ganhar o campeonato de futebol este ano?");
+    });
+
+    // Atualizar contagem de participantes ativos no ciclo
+    async function updateStatusCounter() {
+      try {
+        const res = await fetch(`/api/equilibra/status?department=${encodeURIComponent(currentDepartment)}`);
+        const data = await res.json();
+        activeSessionsCountEl.textContent = data.activeSessionsCount;
+      } catch (e) {
+        console.warn("Erro ao buscar status:", e);
+      }
+    }
+
+    // Consolidar ciclo e realizar expurgo
+    btnConsolidate.addEventListener("click", async () => {
+      btnConsolidate.disabled = true;
+      btnConsolidate.textContent = "Processando e Expurgando...";
+
+      try {
+        const res = await fetch("/api/equilibra/consolidate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ department: currentDepartment })
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          renderReport(data.report);
+          // Limpa as conversas da memória local do navegador para honrar o expurgo (LGPD)
+          sessionHistories = {};
+          initSession(currentSessionId, true);
+          updateStatusCounter();
+        } else {
+          alert("Erro ao consolidar: " + (data.error || "Erro desconhecido"));
+        }
+      } catch (err) {
+        alert("Falha na comunicação com o servidor para consolidação.");
+      } finally {
+        btnConsolidate.disabled = false;
+        btnConsolidate.textContent = "Consolidar e Expurgo";
+      }
+    });
+
+    // Renderizar o Relatório Executivo Formal da NR-1
+    function renderReport(report) {
+      let factorsHtml = "";
+      report.factorAverages.forEach(f => {
+        let barColor = "green";
+        if (f.riskLevel === "alto") barColor = "red";
+        else if (f.riskLevel === "medio") barColor = "amber";
+
+        const pct = Math.min(100, Math.max(0, (f.average / 10) * 100));
+
+        factorsHtml += `
+          <div class="factor-item-box">
+            <div class="factor-item-title">${f.title}</div>
+            <div class="factor-item-score-row">
+              <span class="factor-item-score-val">${f.average.toFixed(1)} / 10</span>
+              <span class="risk-badge ${f.riskLevel}">${f.riskLevel} risco</span>
+            </div>
+            <div class="score-progress-track">
+              <div class="score-progress-bar ${barColor}" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      let issuesHtml = "";
+      report.recurringIssues.forEach(issue => {
+        issuesHtml += `<li>${issue}</li>`;
+      });
+
+      let recsHtml = "";
+      report.recommendations.forEach(r => {
+        recsHtml += `
+          <tr>
+            <td><strong>${r.fatorAlvo}</strong></td>
+            <td>${r.intervencao}</td>
+            <td>${r.prazoSugerido}</td>
+            <td style="color: #38bdf8;">${r.impactoEsperado}</td>
+          </tr>
+        `;
+      });
+
+      reportContainer.innerHTML = `
+        <div class="report-card">
+          <div class="report-header-banner">
+            <div>
+              <h2>Relatório Consolidado de Riscos Psicossociais (NR-1)</h2>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                Departamento: <strong>${report.department}</strong> | Data de Fechamento: ${report.generatedAt}
+              </p>
+            </div>
+            <div>
+              <span class="risk-badge ${report.riskOverall}">Risco Geral: ${report.riskOverall}</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-subtitle">Matriz de Fatores Ocupacionais (COPSOQ / NR-1)</div>
+            <div class="factors-grid">
+              ${factorsHtml}
+            </div>
+          </div>
+
+          <div>
+            <div class="section-subtitle">Síntese Analítica Coletiva Despersonalizada</div>
+            <div class="qualitative-box">
+              ${report.qualitativeSummary}
+            </div>
+          </div>
+
+          <div>
+            <div class="section-subtitle">Apontamentos Coletivos Identificados</div>
+            <ul class="issues-list">
+              ${issuesHtml}
+            </ul>
+          </div>
+
+          <div>
+            <div class="section-subtitle">Plano de Ação Recomendado (5W2H - PGR)</div>
+            <table class="recommendations-table">
+              <thead>
+                <tr>
+                  <th>Fator Alvo</th>
+                  <th>Intervenção Sugerida</th>
+                  <th>Prazo</th>
+                  <th>Impacto Esperado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="purge-notice-box">
+            <div>
+              <strong>Expurgo de Registros Executado com Sucesso (Art. 16 - LGPD)</strong>
+              <div style="margin-top: 2px;">Todas as transcrições individuais deste ciclo foram permanentemente deletadas. Apenas as métricas consolidadas acima foram preservadas para o inventário do PGR.</div>
+            </div>
+            <div class="audit-stamp">
+              Hash: ${report.auditHash}
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+    // Impressão / Salvar em PDF
+    btnPrintReport.addEventListener("click", () => {
+      window.print();
+    });
+  </script>
+</body>
+</html>

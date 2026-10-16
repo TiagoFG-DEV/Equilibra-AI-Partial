@@ -28,6 +28,9 @@ export function widgetRouter(chat: ChatService, skillLoader: SkillLoader) {
 
     try {
       const skill = await skillLoader.load(skillKey);
+      if (!skill) {
+        return res.status(404).json({ error: "Skill não encontrada no servidor." });
+      }
       return res.json({
         name: skill.identity?.display_name || skill.name,
         fallback_message: skill.fallback_message,

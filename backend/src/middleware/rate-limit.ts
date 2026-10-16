@@ -11,7 +11,7 @@ export function createApiRateLimiter(redis: Redis | null, env: AppEnv) {
       standardHeaders: true,
       legacyHeaders: false,
       store: new RedisStore({
-        sendCommand: (...args: string[]) => redis.call(...args) as Promise<unknown>,
+        sendCommand: ((...args: string[]) => (redis.call as any)(...args)) as any,
       }),
     });
   }
