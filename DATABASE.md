@@ -339,3 +339,21 @@ Não ligar automaticamente `User` ou `Message` às participações anônimas/pse
 - [ ] Pendências não implementadas explicitadas; nenhum item considerado concluído só por estar documentado.
 
 Os testes atuais exercitam DDL/transações em PGlite, recuperação, replay, isolamento entre projetos, conflito de escrita, artefatos cifrados e ausência de saída local no modo postgres. Eles não verificam a rede/TLS real do Neon, a política do provedor ou um plano de recuperação operacional. Essas validações exigem o ambiente configurado e devem constar das evidências finais.
+
+## 14. Registro de implantação — 22/10/2026
+
+Estado observado nesta verificação, não garantia contínua de disponibilidade:
+
+| Item | Evidência / situação |
+| --- | --- |
+| Serviço existente | Render `Equilibra-AI-Partial`, ID `srv-dbd351hsrm7s73bfishg`, plano Free, Oregon, uma instância, branch main |
+| URL | `https://equilibra-ai-partial.onrender.com` |
+| Runtime público | `/status.json` informou Node v22.23.4 |
+| Disponibilidade técnica | Deploy do código `0652c82` identificado como live pelo Render; página de diagnóstico disponível |
+| Disponibilidade funcional | `/ready` respondeu 503, `ready=false`; não liberado para pesquisas |
+| Configuração observada | `storage=file`; indicadores de autenticação, cifragem e armazenamento ausentes; referências disponíveis |
+| Banco Neon | Organização conectada no plano Free; consulta não encontrou projetos. Tentativa de criação com intervalo explícito de suspensão foi rejeitada pelo provedor; nova consulta confirmou ausência de projeto naquele momento |
+| Pendência de acesso | Conexão Neon deixou de disponibilizar ferramentas após atualização dos conectores. Necessário reconectar antes de provisionar banco e obter conexão privada |
+| Próxima validação | Configurar banco e variáveis no workspace confirmado, fazer deploy e testar ciclo fictício completo e recuperação remota |
+
+Não há credenciais neste registro. A presença de um deploy live ou HTTP 200 na página inicial não comprova conexão com banco, autenticação válida nem operação da pesquisa. Atualizar este registro após cada etapa remota concluída, preservando a distinção entre configuração pendente, teste local e teste remoto.
