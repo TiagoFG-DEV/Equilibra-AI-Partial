@@ -16,13 +16,17 @@ import { resolveSurveyRoot } from './config/paths';
 import { authenticate, loadClients } from './api/clients';
 import { ApiError } from './api/errors';
 import { openApi } from './api/openapi';
+import { createPostgres } from './survey/postgres';
+import { mountStatus } from './api/status';
 
 export function createApp(env: AppEnv, options:{provider?:AIProvider}={}) {
  const clients=loadClients(env);
- if(env.NODE_ENV==='production'&&(!env.SURVEY_OUTPUT_DIR||!path.isAbsolute(env.SURVEY_OUTPUT_DIR)))throw new Error('Produção exige SURVEY_OUTPUT_DIR absoluto em disco persistente');
+ if(env.NODE_ENV==='production'&&env.SURVEY_STORAGE==='file'&&(!env.SURVEY_OUTPUT_DIR||!path.isAbsolute(env.SURVEY_OUTPUT_DIR)))throw new Error('Modo file exige SURVEY_OUTPUT_DIR absoluto em disco persistente');
+ if(env.SURVEY_STORAGE==='postgres'&&!env.SURVEY_DATABASE_URL)throw new Error('Configure SURVEY_DATABASE_URL');
  const root=resolveSurveyRoot(),output=env.SURVEY_OUTPUT_DIR||path.join(root,'survey');
  const redis=createRedis(env),provider=options.provider||createAIProvider(env);
- const engines=new Map(Object.keys(clients).map(id=>[id,new SurveyEngine(root,provider,path.join(output,id))]));
+ const database=env.SURVEY_STORAGE==='postgres'?createPostgres(env.SURVEY_DATABASE_URL!):undefined;
+ const engines=new Map(Object.keys(clients).map(id=>[id,new SurveyEngine(root,provider,path.join(output,id),database?.store(id))]));
  let initialized=false;
  const ready=Promise.all([...engines.values()].map(e=>e.initialize())).then(()=>{initialized=true;});
  const app=express();app.disable('x-powered-by');
@@ -32,6 +36,7 @@ export function createApp(env: AppEnv, options:{provider?:AIProvider}={}) {
  app.get('/health',(_req,res)=>res.json({ok:true,apiVersion:'1',dataUse:'sandbox'}));
  app.get('/ready',(_req,res)=>res.status(initialized?200:503).json({ready:initialized}));
  app.get('/openapi.json',(_req,res)=>res.json(openApi));
+ mountStatus(app,()=>initialized);
  const pairingEnabled=env.WHATSAPP_PAIRING_ENABLED?env.WHATSAPP_PAIRING_ENABLED==='true':env.NODE_ENV!=='production';
  const api=express.Router();
  api.use(createApiRateLimiter(redis,env));
@@ -55,5 +60,6 @@ export function createApp(env: AppEnv, options:{provider?:AIProvider}={}) {
   const status=error instanceof ApiError?error.status:error instanceof z.ZodError?400:bodyError.type==='entity.too.large'?413:bodyError.type==='entity.parse.failed'?400:(error as NodeJS.ErrnoException).code==='ENOENT'?422:500;
   res.status(status).json({error:{code:error instanceof ApiError?error.code:status===400?'INVALID_REQUEST':status===413?'PAYLOAD_TOO_LARGE':status===422?'INVALID_SURVEY':'INTERNAL_ERROR',message:error instanceof ApiError?error.message:status===500?'Falha interna':status===422?'Pesquisa ou referência não encontrada':'Requisição inválida',requestId:res.locals.requestId}});
  });
- return {app,redis,ready,drain:()=>Promise.all([...engines.values()].map(e=>e.drain()))};
+ const drain=()=>Promise.all([...engines.values()].map(e=>e.drain()));
+ return {app,redis,ready,drain,close:async()=>{await drain();await database?.pool.end();}};
 }

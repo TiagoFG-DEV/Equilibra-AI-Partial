@@ -2,15 +2,11 @@ services:
   - type: web
     name: equilibra-api
     runtime: node
-    plan: starter
+    plan: free
     numInstances: 1
     buildCommand: npm ci --include=dev && npm run db:generate && npm run build
     startCommand: npm start
-    healthCheckPath: /ready
-    disk:
-      name: equilibra-private-data
-      mountPath: /var/data
-      sizeGB: 1
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: "22"
@@ -18,8 +14,10 @@ services:
         value: production
       - key: SURVEY_ROOT
         value: ../skills
-      - key: SURVEY_OUTPUT_DIR
-        value: /var/data/survey
+      - key: SURVEY_STORAGE
+        value: postgres
+      - key: SURVEY_DATABASE_URL
+        sync: false
       - key: SURVEY_API_KEY
         generateValue: true
       - key: SURVEY_ENCRYPTION_KEY
@@ -39,4 +37,4 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_CHAT_MODEL
-        sync: false
+        value: qwen/qwen3.8-27b

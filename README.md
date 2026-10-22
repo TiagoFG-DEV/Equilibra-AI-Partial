@@ -2,36 +2,50 @@
 
 **Documentação de uso da API:** consulte [API.md](API.md) para o checklist completo, instalação local, todas as variáveis, publicação no Render, integração com Vercel, endpoints, exemplos executáveis e solução de problemas. O contrato OpenAPI está em `/openapi.json` quando o servidor estiver rodando.
 
+## Implantação atual: Render Free com PostgreSQL externo
+
+O caminho padrão do `render.yaml` agora é **Render Free + PostgreSQL externo**, como o plano gratuito do Neon dentro das cotas dele. Configure `SURVEY_STORAGE=postgres` e `SURVEY_DATABASE_URL` com a conexão privada obtida no provedor. Nesse modo não é necessário disco pago: snapshots, recibos e relatórios são gravados cifrados em tabelas PostgreSQL. A aplicação cria somente `equilibra_state` e `equilibra_artifacts`; o usuário de banco precisa de permissão para criá-las. Não executa as migrações do módulo Prisma legado para armazenar pesquisas.
+
+O backend PostgreSQL usa transação para confirmar estado e artefatos juntos, com controle de versão para rejeitar escrita concorrente desatualizada. TLS valida certificados nos hosts remotos; não desabilite essa proteção para contornar erro de conexão. Os testes usam PostgreSQL embarcado em WASM (PGlite) para verificar as consultas/transações; a conexão real ao seu Neon deve ser testada depois de configurar a conta.
+
+A página inicial `/` mostra status sem chaves, URLs de banco ou dados dos participantes. `/status.json` apresenta apenas indicadores de configuração. Se a configuração falhar, o processo continua em **diagnóstico**, `/health` responde e `/ready` retorna 503; as rotas de pesquisa ficam bloqueadas. A inicialização é tentada novamente a cada 30 segundos. Isso facilita visualizar a falha no Render, mas não deve ser interpretado como API pronta. Use `/ready` no monitor que precisa verificar disponibilidade funcional.
+
+O modelo Groq `llama-3.3-70b-versatile` configurado anteriormente não apareceu no catálogo da conta consultada. O default e o exemplo foram atualizados para `qwen/qwen3.8-27b`, disponível na conta e testado com uma resposta JSON de dados fictícios. Uma variável antiga no Render continua tendo precedência sobre esse default: atualize GROQ_CHAT_MODEL no serviço.
+
+O modo `SURVEY_STORAGE=file` permanece disponível para desenvolvimento ou servidor com disco persistente. As instruções de disco nas seções seguintes descrevem essa alternativa; não são requisito do modo postgres. A arquitetura `skills/database`, `skills/focus` e `skills/survey` é preservada: referências continuam em skills e, no modo postgres, a saída é lógica no banco, sem cópia local dos resultados.
+
+O plano gratuito do Render pode suspender ou reiniciar o processo. Com PostgreSQL externo, a retomada lê o estado do banco; um monitor de uptime não é necessário para preservar os dados e não garante disponibilidade contínua. O Neon gratuito também tem cotas e limites: confira-os em [Neon Plans](https://neon.com/docs/introduction/plans).
+
 Serviço TypeScript para integrar pesquisas ocupacionais ao site Equilibra e ao canal WhatsApp, com uma interface local mínima exclusivamente para pareamento. O objetivo é facilitar a coleta e a síntese para o RH, mantendo o controle do roteiro no servidor. A IA classifica indícios dentro de uma base cadastrada; não define notas, não inventa fatos, não decide conformidade e não substitui avaliação profissional.
 
-Este repositório oferece uma API HTTP versionada, publicável no Render para homologação com dados fictícios. `NODE_ENV=production` é aceito quando `SURVEY_OUTPUT_DIR` aponta para um caminho absoluto em volume persistente. O estado das pesquisas é cifrado e recuperado após reinício; cada projeto consumidor tem chave e diretório próprios. A implantação técnica não significa liberação para dados pessoais reais: gestão de direitos após conclusão, retenção, protocolo humano e validação metodológica ainda exigem trabalho. Não existe garantia absoluta de segurança ou conformidade com a LGPD.
+Este repositório oferece uma API HTTP versionada, publicável no Render para homologação com dados fictícios. Em produção, use PostgreSQL externo ou, no modo file, `SURVEY_OUTPUT_DIR` absoluto em volume persistente. O estado das pesquisas é cifrado e recuperado após reinício; cada projeto consumidor tem chave e partição próprias. A implantação técnica não significa liberação para dados pessoais reais: gestão de direitos após conclusão, retenção, protocolo humano e validação metodológica ainda exigem trabalho. Não existe garantia absoluta de segurança ou conformidade com a LGPD.
 
 ## Publicar a API: Render recomendado
 
-A arquitetura suportada nesta versão é **um serviço Node.js no Render, uma única instância e um disco persistente**. O site consumidor pode ficar na Vercel, no próprio Render ou em qualquer outra hospedagem. O backend desse site chama a API por HTTPS. Não coloque a chave de integração no JavaScript entregue ao navegador.
+A arquitetura padrão é **um serviço Node.js no Render Free e PostgreSQL externo**, mantendo uma instância nesta fase. Alternativamente, o modo file usa um serviço pago com disco persistente. O site consumidor pode ficar na Vercel ou em outra hospedagem. O backend desse site chama a API por HTTPS. Não coloque a chave no JavaScript entregue ao navegador.
 
-O [Render oferece discos persistentes em serviços pagos](https://render.com/docs/disks); sem disco, arquivos locais são perdidos em reinícios/deploys. O [plano gratuito suspende serviços inativos e não permite disco persistente](https://render.com/docs/free). Por isso o Blueprint `render.yaml` seleciona um serviço pago com disco. Confira o custo no painel antes de criar; nenhum recurso pago foi contratado por este repositório.
+O [Render oferece discos persistentes em serviços pagos](https://render.com/docs/disks); sem disco, arquivos locais são perdidos em reinícios/deploys. O [plano gratuito suspende serviços inativos e não permite disco persistente](https://render.com/docs/free). Por isso o Blueprint `render.yaml` usa PostgreSQL externo em vez de arquivos locais. Nenhum recurso pago foi contratado por este repositório.
 
 ### Passo a passo no Render
 
 1. Envie esta versão ao GitHub e entre no [painel do Render](https://dashboard.render.com/).
-2. Escolha New → Blueprint, conecte o repositório e a branch desejada. O Render detectará `render.yaml` na raiz. Revise o plano, a região e o disco antes de confirmar.
+2. Para um serviço novo, escolha New → Blueprint e conecte repositório/branch; revise plano Free e região. Para o serviço existente, atualize Settings e Environment sem criar outro serviço. Um push não aplica automaticamente o Blueprint a um serviço manual.
 3. A raiz do projeto deve permanecer a raiz do repositório, não `backend`. O build é `npm ci --include=dev && npm run db:generate && npm run build`; o start é `npm start`. `--include=dev` instala o compilador mesmo com NODE_ENV=production. A geração Prisma produz os tipos exigidos pelos módulos legados, sem conectar ao banco ou executar migrações. O Node é 22. O servidor escuta em `0.0.0.0` e usa a variável `PORT` fornecida pelo Render.
 4. Defina `SURVEY_ENCRYPTION_KEY` com exatamente 64 caracteres hexadecimais aleatórios. Gere com `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Guarde uma cópia segura: trocar ou perder essa chave impede recuperar o estado existente. Não use a mesma chave da autenticação.
 5. Preencha `GROQ_API_KEY` e `GROQ_CHAT_MODEL` com as credenciais e um modelo disponível na sua conta. Para outro provedor, altere `AI_PROVIDER` e configure as variáveis correspondentes do exemplo de ambiente. Não é necessário cadastrar chaves de todos os provedores.
 6. Em `CORS_ORIGINS`, coloque as origens exatas autorizadas, separadas por vírgula, como `https://seu-site.vercel.app`. Não inclua caminhos de páginas. Se todas as chamadas forem backend-backend, a ausência de Origin é aceita; CORS não substitui autenticação.
 7. O Blueprint gera `SURVEY_API_KEY` para uma integração inicial chamada `default`. Copie a chave do painel para o ambiente privado do backend consumidor. Para vários projetos, configure `API_CLIENTS_JSON` como descrito abaixo; essa variável passa a ter precedência.
-8. Preserve `SURVEY_OUTPUT_DIR=/var/data/survey`, o disco montado em `/var/data`, `SURVEY_ROOT=../skills`, `SURVEY_MIN_GROUP=5`, `SURVEY_ALLOW_DEMO=true` e `WHATSAPP_PAIRING_ENABLED=false`. A base de exemplo é demonstrativa; o modo demo não deve receber dados reais.
-9. Aguarde o deploy e teste `https://SEU-SERVICO.onrender.com/health`, `/ready` e `/openapi.json`. O health check do Render é `/ready`, que só fica pronto após carregar e decifrar o estado.
+8. Configure `SURVEY_STORAGE=postgres` e `SURVEY_DATABASE_URL` com a conexão privada Neon. Preserve `SURVEY_ROOT=../skills`, `SURVEY_MIN_GROUP=5`, `SURVEY_ALLOW_DEMO=true` e `WHATSAPP_PAIRING_ENABLED=false`. Não precisa anexar disco. A base é demonstrativa; não use dados reais.
+9. Aguarde o deploy e teste a página inicial, `/health`, `/ready` e `/openapi.json`. O health check do Blueprint é `/health` para permitir diagnóstico; somente `/ready` com 200 confirma que a API inicializou.
 10. Faça uma pesquisa fictícia de ponta a ponta. Para verificar persistência, envie algumas respostas, reinicie o serviço e retome com os mesmos IDs e tokens. Teste restauração de backup em ambiente separado antes de qualquer operação real.
 
-Também é possível criar New → Web Service manualmente usando os mesmos comandos, variáveis e disco do Blueprint. A especificação usada está na [documentação de Blueprints do Render](https://render.com/docs/blueprint-spec). Não execute duas réplicas, dois processos Node, PM2 cluster ou um segundo serviço escrevendo no mesmo volume. O armazenamento atual não possui lock distribuído e não suporta escala horizontal.
+Também é possível criar New → Web Service manualmente usando os mesmos comandos e variáveis do Blueprint. A especificação está na [documentação de Blueprints do Render](https://render.com/docs/blueprint-spec). Mantenha uma instância/processo nesta fase. O PostgreSQL rejeita conflitos de versão com 409, mas não fornece fila distribuída; escalar exige rever coordenação, carga e retentativas.
 
 ### Vercel: hospedar o projeto consumidor
 
 Use a Vercel para o frontend e/ou backend do site Equilibra. Nas variáveis privadas desse projeto, defina `EQUILIBRA_API_URL=https://SEU-SERVICO.onrender.com` e `EQUILIBRA_API_KEY=<chave-do-projeto>`. Uma rota do backend na Vercel importa o cliente de exemplo ou usa `fetch` para chamar o Render. Nunca use prefixos públicos como `NEXT_PUBLIC_` ou `VITE_` para a chave.
 
-Não há `vercel.json` ou handler serverless nesta entrega. A API mantém cache e snapshots locais cifrados, e depende de disco persistente. Para executá-la diretamente em Vercel Functions, seria necessário substituir o armazenamento por banco externo transacional, implementar coordenação entre invocações e separar o transporte WhatsApp. Não basta exportar o Express ou gravar em `/tmp`. Consulte os [recursos e limites do runtime Node.js da Vercel](https://vercel.com/docs/functions/runtimes/node-js). A recomendação de Render decorre da persistência/processo desta implementação, não de uma alegação genérica de que a Vercel não oferece WebSockets.
+Não há `vercel.json` ou handler serverless nesta entrega. O backend PostgreSQL já existe, mas o entrypoint, a fila local e o ciclo de conexões foram preparados para processo contínuo no Render. Deploy direto em Vercel Functions exigiria adaptar e testar esse ciclo, a coordenação entre invocações e o transporte WhatsApp. Não basta exportar o Express ou gravar em `/tmp`. Consulte o [runtime Node.js da Vercel](https://vercel.com/docs/functions/runtimes/node-js).
 
 ## Contrato público e integração em outros projetos
 
@@ -95,11 +109,11 @@ Rate limiting usa Redis se `REDIS_URL` estiver configurada; caso contrário usa 
 
 ### Persistência e limites desta implantação
 
-`SURVEY_OUTPUT_DIR/<projeto>/.state.enc.json` guarda o snapshot cifrado de ciclos, notas, indícios, aceite, tokens aleatórios e recibos de idempotência, sem relatos brutos. Cada mutação é serializada por projeto e confirmada ao cliente somente depois da gravação atômica desse estado. Em falha de gravação, a memória volta ao estado anterior. A escrita usa arquivo temporário, sincronização e rename. Uma chave incorreta ou estado corrompido impede a inicialização; não se descarta o estado silenciosamente.
+No modo file, `SURVEY_OUTPUT_DIR/<projeto>/.state.enc.json` guarda o snapshot cifrado de ciclos, notas, indícios, aceite, tokens aleatórios e recibos de idempotência, sem relatos brutos. Cada mutação é serializada por projeto e confirmada somente após gravação atômica. Em falha, a memória volta ao estado anterior. A escrita usa arquivo temporário, sincronização e rename. Uma chave incorreta ou estado corrompido impede a inicialização; não se descarta o estado silenciosamente.
 
-Os arquivos de resultado ficam em `SURVEY_OUTPUT_DIR/<projeto>/<cycleId>/`. O relatório individual continua cifrado e privado; o coletivo é JSON sem relatos. O snapshot é a fonte de verdade da API. Resultados auxiliares e snapshot não formam uma transação multiarquivo: se houver queda entre suas escritas, pode restar arquivo auxiliar órfão, que não deve ser contado como resposta. Retentativas reconciliam os nomes determinísticos. Não importe arquivos do diretório para contar participantes.
+No modo file, os resultados ficam em `SURVEY_OUTPUT_DIR/<projeto>/<cycleId>/`. O individual é cifrado e privado; o coletivo é JSON sem relatos. O snapshot é a fonte de verdade. Resultados auxiliares e snapshot não formam uma transação multiarquivo: quedas podem deixar arquivo órfão, que não conta como resposta. Retentativas reconciliam nomes determinísticos. No modo postgres, estado e artefatos são cifrados e confirmados juntos em uma transação nas tabelas `equilibra_state` e `equilibra_artifacts`. Não conte arquivos ou linhas de artefatos para determinar conclusão; consulte a API.
 
-O diretório padrão no desenvolvimento continua `skills/survey`, agora com subpastas por projeto. Para produção configure obrigatoriamente volume persistente absoluto; o Blueprint usa `/var/data/survey`. Faça backups cifrados e restaure junto com a mesma chave em ambiente isolado. Sem disco persistente, o caminho absoluto por si só não garante retenção. Esta implementação carrega o estado de cada projeto em memória; conjuntos grandes precisam migrar para banco transacional e filas, não aumentar réplicas.
+O diretório padrão no desenvolvimento em modo file continua `skills/survey`, com subpastas por projeto; produção file exige volume persistente absoluto. O Blueprint usa postgres, sem cópia local. Faça backups do armazenamento escolhido e preserve a mesma chave separadamente; teste restauração em ambiente isolado. O estado de cada projeto ainda é carregado e regravado por inteiro; conjuntos grandes precisam de modelagem incremental e filas, não apenas mais réplicas.
 
 ## Regra principal: o agente se apresenta primeiro
 
@@ -193,7 +207,7 @@ Equilibra-AI-Partial/
 ├── .dockerignore           Exclusões do contexto de construção Docker
 ├── package.json            Workspaces e comandos gerais do projeto
 ├── package-lock.json       Versões resolvidas das dependências
-├── render.yaml             Blueprint do serviço e disco no Render
+├── render.yaml             Render Free com PostgreSQL externo
 ├── API.md                  Manual completo de instalação, operação e integração HTTP
 └── README.md               Arquitetura, funcionamento e integração
 ```

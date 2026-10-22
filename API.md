@@ -2,6 +2,32 @@
 
 Este é o manual operacional da implementação atual. A arquitetura e as regras do produto estão no [README](README.md); o contrato de máquina está em `/openapi.json`, gerado por `backend/src/api/openapi.ts`. Os exemplos abaixo usam dados fictícios e a pesquisa `exemplo` do repositório.
 
+## Atualização de implantação: Render Free + banco externo
+
+O Blueprint atual usa Render Free com PostgreSQL externo. As instruções de arquivos/volume neste manual se aplicam à alternativa `SURVEY_STORAGE=file`. Para manter o servidor gratuito, siga esta configuração em vez de anexar disco:
+
+1. Crie/conecte uma conta Neon e um projeto no plano gratuito, revisando as cotas. Não é necessário comprar um plano para os testes. Obtenha uma conexão PostgreSQL privada no painel do projeto.
+2. No serviço Render já existente, abra Environment e configure `SURVEY_STORAGE=postgres` e `SURVEY_DATABASE_URL` com essa conexão. Não cole a conexão no chat, no GitHub ou na página de status.
+3. Defina `SURVEY_API_KEY` com pelo menos 32 caracteres aleatórios e `SURVEY_ENCRYPTION_KEY` com outra chave hexadecimal de 64 caracteres. As chaves locais geradas ficam no `backend/.env`, ignorado pelo Git; o Render precisa recebê-las separadamente. `API_CLIENTS_JSON` deve ficar ausente/vazio se optar pela chave única.
+4. Use `NODE_VERSION=22`, `NODE_ENV=production`, `SURVEY_ROOT=../skills`, `SURVEY_ALLOW_DEMO=true`, `SURVEY_MIN_GROUP=5`, `WHATSAPP_PAIRING_ENABLED=false` e `TRUST_PROXY_HOPS=1`.
+5. Preserve a chave real do provedor e ajuste `GROQ_CHAT_MODEL=qwen/qwen3.8-27b`, modelo disponível e testado na configuração atual. Configure `CORS_ORIGINS` com as origens autorizadas.
+6. Mantenha a raiz do serviço na raiz do repositório, build `npm ci --include=dev && npm run db:generate && npm run build` e start `npm start`. O health check de hospedagem pode usar `/health`; monitore `/ready` para saber se a API realmente está pronta.
+7. Salve as variáveis e faça o deploy. Abra `/`: a página exibe as pendências sem revelar segredos. API não pronta permanece bloqueada e o servidor tenta inicializar novamente a cada 30 segundos.
+8. O serviço cria as tabelas próprias `equilibra_state` e `equilibra_artifacts` com CREATE TABLE IF NOT EXISTS; a conexão precisa ter permissão de criação. Não executa migração das tabelas legadas. Se a política do banco exigir criação manual, use as definições `setupSql` de `backend/src/survey/postgres.ts` por um administrador antes de iniciar.
+9. Teste criar, responder e concluir um ciclo fictício; reinicie o serviço e consulte o mesmo ciclo com a mesma chave. Confirme replay/idempotência e que nenhuma cópia dos resultados foi gravada em disco efêmero.
+
+| Nova variável | Comportamento |
+| --- | --- |
+| `SURVEY_STORAGE=file` | Default local: snapshots/resultados em arquivos; produção exige volume persistente |
+| `SURVEY_STORAGE=postgres` | Estado e artefatos cifrados no banco; não exige SURVEY_OUTPUT_DIR |
+| `SURVEY_DATABASE_URL` | Obrigatória no modo postgres; URI postgres/postgresql do provedor, com senha privada |
+
+As consultas usam parâmetros e TLS com verificação de certificado em servidores remotos. A URI pode incluir sslmode do provedor, mas o adaptador conserva verificação estrita. Não desabilite SSL para corrigir um erro. Um PostgreSQL em localhost é aceito sem TLS para desenvolvimento. O banco legado indicado por DATABASE_URL não é automaticamente reutilizado; configure explicitamente SURVEY_DATABASE_URL.
+
+O PostgreSQL confirma snapshot e relatórios em uma transação. O estado é recarregado antes das operações e uma versão evita sobrescrever alterações concorrentes. Mesmo assim, mantenha uma instância até validar carga e topologia. A migração automática de snapshots antigos de arquivo para banco não está implementada; não troque o modo de uma operação com dados reais sem um plano de migração.
+
+No modo postgres, relatórios coletivos também ficam cifrados na tabela de artefatos, embora a API devolva o agregado autorizado em JSON. Retenção e backup devem cobrir as duas tabelas e a chave de cifragem, mantida separada. Não há plano pago contratado automaticamente pelo código. O [Neon Free possui cotas](https://neon.com/docs/introduction/plans), e manter o Render desperto não substitui persistência.
+
 ## 1. O que é necessário e o que já funciona
 
 A API recebe respostas por HTTP, apresenta o agente de IA, controla aceite e roteiro, valida formatos, limita aprofundamentos e gera sínteses individuais cifradas e resultado coletivo. O consumidor pode ser um backend Node.js, Python, Java, PHP, uma rota de servidor na Vercel ou outro cliente HTTPS.
@@ -13,7 +39,7 @@ O servidor não envia mensagens WhatsApp sozinho. O pareamento local não está 
 | Testar o código sem modelo real | Git, Node.js 22 recomendado, npm e `npm test`; os testes usam provedor falso |
 | Rodar a API localmente | Dependências, tipos Prisma gerados, segredos da API e cifragem, base/roteiro e diretório gravável |
 | Obter classificação pelo modelo | Provedor de IA acessível, credencial quando exigida e modelo disponível nessa conta |
-| Publicar no Render | Conta Render conectada ao GitHub, serviço pago com disco, variáveis preenchidas e uma instância |
+| Publicar no Render | Conta Render conectada ao GitHub, serviço Free com PostgreSQL externo (ou pago com disco no modo file), variáveis preenchidas e uma instância |
 | Usar em outro sistema | Backend consumidor com URL/chave privadas, controle dos seus usuários, tokens e IDs de mensagens |
 | Coletar por WhatsApp real | Implementar transporte, validação de webhook, vínculo de identidade separado, fila e envio de respostas |
 | Operar com colaboradores reais | Resolver as pendências metodológicas, de privacidade, atendimento humano e operação descritas na seção 16 |
@@ -24,13 +50,13 @@ Publicar com `NODE_ENV=production` configura a execução técnica no servidor. 
 
 ### Na máquina de desenvolvimento
 
-- [ ] Instalar Git, Node.js 22 e npm compatível.
-- [ ] Clonar o repositório e entrar na sua raiz.
-- [ ] Instalar também dependências de desenvolvimento para compilar TypeScript.
-- [ ] Gerar os tipos Prisma; não é necessário subir PostgreSQL para o motor atual.
-- [ ] Criar `backend/.env` a partir do exemplo, preservando configurações locais existentes.
+- [V] Instalar Git, Node.js 22 e npm compatível.
+- [V] Clonar o repositório e entrar na sua raiz.
+- [V] Instalar também dependências de desenvolvimento para compilar TypeScript.
+- [V] Gerar os tipos Prisma; não é necessário subir PostgreSQL para o motor atual.
+- [V] Criar `backend/.env` a partir do exemplo, preservando configurações locais existentes.
 - [ ] Gerar um segredo de autenticação e outra chave de cifragem, independentes.
-- [ ] Configurar o provedor de IA e confirmar a disponibilidade do modelo na conta.
+- [V] Configurar o provedor de IA e confirmar a disponibilidade do modelo na conta.
 - [ ] Definir `SURVEY_ALLOW_DEMO=true` para executar a pesquisa demonstrativa não aprovada.
 - [ ] Garantir acesso de leitura a `skills/database` e `skills/focus`, e escrita à saída.
 - [ ] Compilar, executar testes e iniciar a API.
@@ -38,10 +64,10 @@ Publicar com `NODE_ENV=production` configura a execução técnica no servidor. 
 
 ### Na hospedagem
 
-- [ ] Enviar o código ao GitHub sem `.old`, `.env`, credenciais ou resultados.
-- [ ] Criar o serviço na raiz do repositório, com os comandos do Blueprint.
-- [ ] Anexar disco persistente e apontar `SURVEY_OUTPUT_DIR` para dentro dele.
-- [ ] Preencher todos os segredos e campos solicitados no Render.
+- [V] Enviar o código ao GitHub sem `.old`, `.env`, credenciais ou resultados.
+- [V] Criar o serviço na raiz do repositório, com os comandos do Blueprint.
+- [ ] Configurar PostgreSQL externo com `SURVEY_STORAGE=postgres` e `SURVEY_DATABASE_URL`; somente a alternativa file exige disco e `SURVEY_OUTPUT_DIR`.
+- [V] Preencher todos os segredos e campos solicitados no Render.
 - [ ] Manter somente uma instância/processo para esse volume.
 - [ ] Configurar CORS, proxy, HTTPS, health check e limites de requisição.
 - [ ] Testar uma pesquisa fictícia e sua retomada após reinício.
@@ -64,7 +90,7 @@ Publicar com `NODE_ENV=production` configura a execução técnica no servidor. 
 ```text
 API.md                              Este manual
 README.md                           Arquitetura e regras de negócio
-render.yaml                         Serviço e disco no Render
+render.yaml                         Render Free com PostgreSQL externo
 backend/.env.example                Referência de configuração
 backend/src/api/                    Autenticação, erros, OpenAPI, testes HTTP
 backend/src/config/paths.ts         Caminhos independentes do diretório de execução
@@ -76,7 +102,7 @@ skills/survey/<projectId>/          Saída local padrão por projeto, ignorada p
 .old/                               Arquivo local, fora do Git e Docker
 ```
 
-No Render, o código e as referências continuam no deploy, mas a saída fica em `/var/data/survey/<projectId>`, no disco persistente. `.old` não é necessária para executar a API.
+No Render, código e referências continuam no deploy; em modo postgres, estado e saída ficam cifrados nas tabelas do banco, particionados por projeto. No modo file alternativo, configure saída em volume persistente, por exemplo `/var/data/survey/<projectId>`. `.old` não é necessária para executar a API.
 
 ## 4. Instalação e execução local
 
@@ -151,14 +177,16 @@ Esses caminhos são da raiz do servidor, não de `/api/v1`. Os testes automatiza
 | `API_CLIENTS_JSON` | Objeto JSON de IDs de projetos para segredos distintos; se preenchido, tem precedência sobre a chave única |
 | `SURVEY_ENCRYPTION_KEY` | Obrigatória; exatamente 64 caracteres hexadecimais, equivalentes a 32 bytes |
 | `SURVEY_ROOT` | Pasta que contém `database`, `focus` e `survey`; padrão `skills` da raiz; caminho relativo é resolvido a partir de `backend` |
-| `SURVEY_OUTPUT_DIR` | Sobrescreve apenas a saída, mantendo as referências em SURVEY_ROOT; em produção exige caminho absoluto num volume persistente |
+| `SURVEY_OUTPUT_DIR` | Somente modo file: sobrescreve saída; produção exige caminho absoluto em volume persistente |
+| `SURVEY_STORAGE` | `file` (padrão local) ou `postgres` (Blueprint Render Free) |
+| `SURVEY_DATABASE_URL` | Conexão privada PostgreSQL obrigatória no modo postgres, com TLS validado em hosts remotos |
 | `SURVEY_MIN_GROUP` | Inteiro com piso 5; padrão 5; abaixo disso o motor recusa inicialização |
 | `SURVEY_ALLOW_DEMO` | Somente o texto `true` habilita os exemplos não aprovados; não permite usar dados reais |
 | `CORS_ORIGINS` | Origens exatas, separadas por vírgula, sem caminhos; padrão inclui localhost 5173, localhost 3000 e 127.0.0.1:5500 |
 | `TRUST_PROXY_HOPS` | Inteiro de 0 a 5; padrão 0; Blueprint usa 1; revisar se mudar a topologia de proxies |
 | `RATE_LIMIT_WINDOW_MS` | Janela do limitador em milissegundos; padrão 60000; usar valor positivo |
 | `RATE_LIMIT_MAX` | Limite de requisições por IP na janela; padrão 100; usar inteiro positivo |
-| `REDIS_URL` | Opcional; Redis para rate limiting. Não armazena as sessões da pesquisa e não substitui o disco |
+| `REDIS_URL` | Opcional; Redis para rate limiting. Não armazena sessões nem substitui PostgreSQL/disco |
 | `WHATSAPP_PAIRING_ENABLED` | `true` ou `false`; sem configuração, habilitado fora de produção. O exemplo e o Blueprint usam false |
 | `NODE_VERSION` | Configuração de build do Render; Blueprint usa 22. Não é o seletor de provedor nem de API |
 
@@ -170,7 +198,7 @@ Configure somente o conjunto usado por `AI_PROVIDER`. Nomes de modelos do exempl
 
 | AI_PROVIDER | Variáveis | Padrões de URL/modelo no código |
 | --- | --- | --- |
-| `groq` (padrão) | `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_CHAT_MODEL` | `https://api.groq.com/openai/v1`, `llama-3.3-70b-versatile` |
+| `groq` (padrão) | `GROQ_API_KEY`, `GROQ_BASE_URL`, `GROQ_CHAT_MODEL` | `https://api.groq.com/openai/v1`, `qwen/qwen3.8-27b` |
 | `openai` | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_CHAT_MODEL` | `https://api.openai.com/v1`, `gpt-4o-mini` |
 | `gemini` | `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL` | Modelo `gemini-1.5-flash`; endpoint definido no adaptador |
 | `ollama` | `OLLAMA_BASE_URL`, `OLLAMA_CHAT_MODEL` | `http://localhost:11434/v1`, `llama3.2` |
@@ -210,16 +238,16 @@ Não use `NEXT_PUBLIC_`, `VITE_` ou outro prefixo público para segredos. O nave
 
 ## 7. Publicação no Render
 
-O Blueprint seleciona um serviço pago com um disco de 1 GB. Revise preços, região e cobrança no painel antes de confirmar. Discos persistentes não estão disponíveis nos serviços gratuitos; arquivos fora do ponto de montagem não são preservados. Fontes: [discos do Render](https://render.com/docs/disks) e [limitações do plano gratuito](https://render.com/docs/free).
+O Blueprint seleciona Render Free sem disco e usa PostgreSQL externo. Revise cotas e região no Render e no Neon. O processo pode suspender por inatividade; a persistência fica no banco. A alternativa file exige disco pago: arquivos no filesystem efêmero não são preservados. Fontes: [discos do Render](https://render.com/docs/disks) e [limitações do plano gratuito](https://render.com/docs/free).
 
 1. Garanta que a versão desejada esteja no GitHub. `.old` e segredos devem permanecer fora do commit.
 2. Entre em `https://dashboard.render.com/`, escolha New → Blueprint e conecte o repositório/branch.
 3. Mantenha a raiz do serviço na raiz do repositório. O arquivo `render.yaml` define o backend sem mover sua arquitetura.
-4. Revise Node 22, uma instância, disco montado em `/var/data` e health check `/ready`.
+4. Revise Node 22, uma instância, plano Free sem disco e health check `/health`. Configure monitor funcional separado em `/ready`.
 5. Confirme o build `npm ci --include=dev && npm run db:generate && npm run build` e o start `npm start`. O compilador é dependência de desenvolvimento, por isso `--include=dev` é necessário no build.
-6. Preencha `SURVEY_ENCRYPTION_KEY`, `GROQ_API_KEY`, `GROQ_CHAT_MODEL` e `CORS_ORIGINS`, solicitados pelo Blueprint. Gere a chave de cifragem como na seção 4.
+6. Preencha `SURVEY_DATABASE_URL`, `SURVEY_ENCRYPTION_KEY`, `GROQ_API_KEY` e `CORS_ORIGINS`. Confira `GROQ_CHAT_MODEL=qwen/qwen3.8-27b` ou outro modelo confirmado na sua conta. Gere a chave de cifragem como na seção 4.
 7. O Render gera `SURVEY_API_KEY` para a primeira integração `default`. Copie-a do painel para o ambiente privado do consumidor. Nunca cole esse valor no repositório.
-8. Preserve `SURVEY_OUTPUT_DIR=/var/data/survey`, `SURVEY_ROOT=../skills`, `SURVEY_ALLOW_DEMO=true`, `SURVEY_MIN_GROUP=5`, `WHATSAPP_PAIRING_ENABLED=false` e `TRUST_PROXY_HOPS=1`, salvo mudança de arquitetura/topologia revisada.
+8. Preserve `SURVEY_STORAGE=postgres`, `SURVEY_ROOT=../skills`, `SURVEY_ALLOW_DEMO=true`, `SURVEY_MIN_GROUP=5`, `WHATSAPP_PAIRING_ENABLED=false` e `TRUST_PROXY_HOPS=1`, salvo mudança revisada. Não precisa de SURVEY_OUTPUT_DIR nesse modo.
 9. Aguarde o build e o deploy. O processo deve registrar a porta, sem exibir segredos. Não fixe a porta manualmente: o Render fornece PORT.
 10. Teste `/health`, `/ready` e `/openapi.json` no domínio HTTPS informado.
 11. Faça uma pesquisa fictícia, reinicie o serviço e confirme a continuidade com os mesmos tokens e IDs.
@@ -227,13 +255,13 @@ O Blueprint seleciona um serviço pago com um disco de 1 GB. Revise preços, reg
 
 Se não houver site consumidor ainda, uma origem local como `http://localhost:3000` permite iniciar os testes. Chamadas servidor-servidor sem Origin são aceitas. Uma origem autorizada não dispensa Bearer.
 
-Na criação manual, use New → Web Service e reproduza a configuração acima. Sem volume, o Render usa filesystem efêmero e perderá estado em reinícios/deploys. Não use duas réplicas, cluster PM2 ou dois serviços escrevendo no mesmo volume. Redis de rate limiting não resolve esse problema.
+Para o serviço manual existente, atualize Settings e Environment com essa configuração, sem criar outro serviço. Um push não aplica automaticamente as variáveis do Blueprint. Mantenha uma instância/processo; o PostgreSQL rejeita versões concorrentes desatualizadas com 409 STORAGE_CONFLICT, mas não substitui uma fila distribuída. Redis de rate limiting não coordena mutações das pesquisas.
 
 O [formato de Blueprint está documentado pelo Render](https://render.com/docs/blueprint-spec). Não é necessário usar o Dockerfile para esse deploy nativo Node. Não há serviço Render criado automaticamente por executar testes, push ou `npm start` na sua máquina.
 
 ## 8. Uso com um site hospedado na Vercel
 
-A arquitetura suportada é: site/backend consumidor na Vercel → API Equilibra no Render → provedor de IA e disco privado. Cadastre no ambiente **privado** do projeto Vercel:
+A arquitetura suportada é: site/backend consumidor na Vercel → API Equilibra no Render → provedor de IA e PostgreSQL privado (ou disco no modo file). Cadastre no ambiente **privado** do projeto Vercel:
 
 ```dotenv
 EQUILIBRA_API_URL=https://SEU-SERVICO.onrender.com
@@ -242,7 +270,7 @@ EQUILIBRA_API_KEY=<chave-do-projeto-consumidor>
 
 `EQUILIBRA_API_URL` não deve incluir `/api/v1` se usar o cliente JavaScript fornecido, que acrescenta esse prefixo. Atualize o deploy do consumidor após mudar variáveis. Sua rota de servidor deve validar usuários e payloads antes de chamar a Equilibra.
 
-Esta API não tem handler nem configuração de deploy direto em Vercel Functions. Ela usa disco persistente e cache de processo, com serialização local; não basta exportar o Express ou usar `/tmp`. Hospedagem direta como função exigiria banco externo transacional, coordenação entre invocações e transporte separado. Consulte o [runtime Node.js da Vercel](https://vercel.com/docs/functions/runtimes/node-js) ao planejar essa evolução.
+Esta API não tem handler nem configuração de deploy direto em Vercel Functions. O armazenamento PostgreSQL já existe, mas entrypoint, fila e conexões usam ciclo de processo contínuo. Hospedagem como função exige adaptar/testar esse ciclo e a coordenação entre invocações; não basta exportar o Express ou usar `/tmp`. Consulte o [runtime Node.js da Vercel](https://vercel.com/docs/functions/runtimes/node-js).
 
 ## 9. Referência HTTP completa
 
@@ -269,7 +297,7 @@ Indica processo respondendo, não sucesso do provedor de IA, da Meta ou da metod
 
 ### GET /ready
 
-Público. Retorna `{"ready":true}` com 200 após inicializar os estados. Durante inicialização da aplicação pode retornar 503 com `{"ready":false}`. O entrypoint aguarda recuperação antes de abrir a porta; falha de chave/disco pode encerrar o processo sem disponibilizar HTTP.
+Público. Retorna `{"ready":true}` com 200 após inicializar os estados. Durante inicialização ou falha de configuração retorna 503 com `{"ready":false}`. O entrypoint abre a porta em modo diagnóstico, bloqueia pesquisas e tenta inicializar novamente a cada 30 segundos. A página `/` e `/status.json` mostram indicadores sem segredos. `/health` com 200 nesse modo não significa que a API está pronta.
 
 ### GET /openapi.json
 
@@ -478,6 +506,8 @@ A NR-1 não fornece um questionário universal único. Os arquivos `exemplo.json
 
 ### O que é gravado
 
+No modo postgres, `equilibra_state` guarda o snapshot cifrado e sua versão por projeto; `equilibra_artifacts` guarda artefatos cifrados por projeto/ciclo/nome. Ambos são confirmados juntos em transação com controle de versão. Não há cópia local dos resultados. No modo file, o layout é:
+
 ```text
 <SURVEY_OUTPUT_DIR>/<projectId>/
   .state.enc.json              Estado cifrado e recibos de operações
@@ -491,6 +521,8 @@ Sem SURVEY_OUTPUT_DIR em desenvolvimento, a base de saída é `skills/survey`. A
 Não apague `.state.enc.json`, não substitua a chave para tentar corrigir uma falha e não remova apenas um relatório para atender um pedido de exclusão: podem existir referências no snapshot e backups. O fluxo completo de direitos após conclusão ainda precisa ser implementado.
 
 ### Backup e restauração
+
+Em postgres, faça backup consistente das duas tabelas pelo provedor ou ferramenta PostgreSQL e restaure em banco isolado com a mesma chave de cifragem e IDs de projeto. Valide `/ready`, continuidade e replay antes de adotar o procedimento. Nunca copie a chave junto ao backup. Os passos de volume abaixo se aplicam somente ao modo file:
 
 1. Defina quem tem acesso ao volume e à chave, mantendo-os separados.
 2. Faça cópia/snapshot do volume privado completo. Para uma cópia consistente dos arquivos, interrompa entradas e finalize o processo de forma controlada antes da cópia; snapshots online podem refletir a janela entre arquivos auxiliares e estado.
@@ -512,7 +544,7 @@ Erros HTTP usam `{"error":{"code":"...","message":"...","requestId":"..."}}`, co
 
 | Sintoma/código | Verificação e ação |
 | --- | --- |
-| Servidor recusa iniciar | Configurar chave Bearer de 32+ caracteres e cifragem hexadecimal de 64; JSON de clientes válido; piso k e modo de pareamento válidos |
+| Página em diagnóstico / 503 CONFIGURATION_REQUIRED | Configurar Bearer de 32+ caracteres, cifragem hexadecimal de 64 e conexão de banco; conferir JSON de clientes, piso k e pareamento; redeploy após mudar ambiente |
 | Falha de recuperação | Conferir volume, IDs de projeto e chave original; não descartar o arquivo cifrado |
 | Build sem tsc/tipos | Instalar com --include=dev, executar db:generate e manter raiz no repositório |
 | Porta ocupada localmente | Usar porta livre ou encerrar o processo que você iniciou; atualizar a base do cliente |
@@ -530,7 +562,7 @@ Erros HTTP usam `{"error":{"code":"...","message":"...","requestId":"..."}}`, co
 | 500 INTERNAL_ERROR | Verificar escrita, espaço, disponibilidade e configuração; usar requestId, sem logar corpo/segredos |
 | 503 NOT_READY | Aguardar recuperação; investigar inicialização se persistir |
 | Respostas funcionam mas IA não parece atuar | Pode haver fallback; conferir credencial/modelo/rede do provedor em teste controlado, sem registrar fala pessoal |
-| Estado desaparece no redeploy | Verificar se SURVEY_OUTPUT_DIR está dentro do disco anexado, não no filesystem efêmero |
+| Estado desaparece no redeploy | Conferir mesmo banco/IDs/chave em postgres; no modo file, SURVEY_OUTPUT_DIR deve ficar no disco anexado |
 | Pesquisa não publica | Todas as participações esperadas precisam concluir e atingir k; recusa/pausa não contam |
 | Média null ou riskIds vazio | Pode haver resposta textual, amostra insuficiente, supressão ou ausência de indício; não inferir ausência de risco |
 | QR não aparece no Render | Pareamento está desligado e protegido por loopback; não é endpoint remoto de operação |
@@ -563,6 +595,6 @@ Arquivos locais que falhem na validação de schema também precisam de revisão
 - Configurar backups, segredos, TLS, permissões de volume, alertas e limites de custo.
 - Definir critérios de fechamento/desistência e agenda de pesquisas, que hoje não têm implementação administrativa.
 - Medir carga e tamanho dos snapshots. O estado de cada projeto é carregado em memória e regravado por mutação.
-- Para escala horizontal, migrar a banco transacional e coordenação distribuída; não aumentar réplicas sobre o mesmo disco.
+- Para escala horizontal, evoluir snapshots para registros incrementais e coordenação distribuída; o PostgreSQL atual rejeita conflitos, mas não implementa fila distribuída. Não aumentar réplicas sobre o mesmo disco em modo file.
 
 Esses itens são lacunas da implementação atual ou decisões necessárias à operação, não instruções para afirmar conformidade garantida. O checklist das seções anteriores permite instalar, publicar e integrar a API de homologação; não elimina essas pendências de uso real.

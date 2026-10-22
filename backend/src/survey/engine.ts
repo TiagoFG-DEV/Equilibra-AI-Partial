@@ -8,6 +8,7 @@ import type { AIProvider } from '../providers/ai-provider.types';
 import { AI_INTRODUCTION, openingMessage } from './introduction';
 import { atomicWrite, decryptJson, encryptJson } from './storage';
 import { ApiError } from '../api/errors';
+import type { Artifact, SurveyBackend } from './postgres';
 type Row = { questionId: string; theme: string; satisfaction: number | null; riskIds: string[]; analysisStatus: string };
 type Receipt = { hash: string; response: unknown };
 type Session = { introduced?: boolean; consentAt?: string; index: number; rows: Row[]; counts: Record<string, number>; pending: string[]; done: boolean; paused: boolean; revoked: boolean; messages: Set<string>; receipts: Map<string,Receipt> };
@@ -21,7 +22,8 @@ export class SurveyEngine {
  private tail: Promise<unknown> = Promise.resolve();
  private loading?: Promise<void>;
  private creationReceipts = new Map<string,Receipt>();
- constructor(private root: string, private provider: AIProvider, outputRoot?: string) {
+ private artifacts:Artifact[]=[];
+ constructor(private root: string, private provider: AIProvider, outputRoot?: string,private backend?:SurveyBackend) {
   this.outputRoot=outputRoot||path.join(root,'survey');
   const key = process.env.SURVEY_ENCRYPTION_KEY || '';
   if (!/^[a-f0-9]{64}$/i.test(key)) throw new Error('SURVEY_ENCRYPTION_KEY: hexadecimal de 32 bytes');
@@ -38,6 +40,7 @@ export class SurveyEngine {
  }
  async initialize() {
   if(!this.loading)this.loading=(async()=>{
+   if(this.backend){await this.loadDatabase();return;}
    await fs.mkdir(this.outputRoot,{recursive:true,mode:0o700});
    await fs.access(this.outputRoot,constants.W_OK);
    try{this.restore(decryptJson(await fs.readFile(path.join(this.outputRoot,'.state.enc.json'),'utf8'),this.key));}
@@ -45,11 +48,21 @@ export class SurveyEngine {
   })();
   return this.loading;
  }
+ private async loadDatabase(){
+  const state=await this.backend!.load();
+  if(state)this.restore(decryptJson(state,this.key));
+  else{this.cycles.clear();this.creationReceipts.clear();}
+ }
  private mutate<T>(action:()=>Promise<T>):Promise<T> {
   const work=this.tail.then(async()=>{
-   await this.initialize();const before=JSON.stringify(this.snapshot());
-   try{const result=await action();await atomicWrite(path.join(this.outputRoot,'.state.enc.json'),encryptJson(this.snapshot(),this.key));return result;}
+   await this.initialize();if(this.backend)await this.loadDatabase();
+   const before=JSON.stringify(this.snapshot());this.artifacts=[];
+   try{const result=await action();const state=encryptJson(this.snapshot(),this.key);
+    if(this.backend)await this.backend.commit(state,this.artifacts);
+    else await atomicWrite(path.join(this.outputRoot,'.state.enc.json'),state);
+    return result;}
    catch(error){this.restore(JSON.parse(before));throw error;}
+   finally{this.artifacts=[];}
   });
   this.tail=work.catch(()=>undefined);return work;
  }
@@ -172,12 +185,11 @@ export class SurveyEngine {
  }
  private async advance(c: Cycle,s: Session,token: string): Promise<unknown> {
   if(s.index<c.focus.questions.length) return {reply:this.question(c,s),finished:false};
-  const dir=path.join(this.outputRoot,c.id);await fs.mkdir(dir,{recursive:true,mode:0o700});
   const report={schemaVersion:1,focusVersion:c.focus.version,methodology:c.focus.methodology,knowledgeVersions:c.knowledge.map(k=>({id:k.id,version:k.version})),riskCatalog:c.knowledge.flatMap(k=>k.risks.map(r=>({id:r.id,label:r.label,theme:k.theme,source:k.source}))),aiProvider:this.provider.name,
    disclaimer:'Análise de inteligência artificial e regras. Não constitui diagnóstico ou classificação oficial da NR-1.',table:s.rows,
    generalAnalysis:`Síntese de IA e regras: ${s.rows.length} perguntas respondidas; ${s.rows.filter(r=>r.riskIds.length).length} com indícios cadastrados. Textos não recebem nota inferida.`};
   const file=createHash('sha256').update(token).digest('hex')+'.json';
-  await atomicWrite(path.join(dir,file),encryptJson(report,this.key));
+  await this.saveArtifact(c.id,file,encryptJson(report,this.key));
   const completed=[...c.sessions.values()].filter(x=>x.done||x===s);
   if(completed.length===c.expected&&completed.length>=this.k) {
    const table=c.focus.questions.map(q=>{
@@ -186,11 +198,18 @@ export class SurveyEngine {
      riskIds:[...new Set(rows.flatMap(r=>r.riskIds))].filter(id=>rows.filter(r=>r.riskIds.includes(id)).length>=this.k)};
    });
    c.aggregate={...report,table,generalAnalysis:'Síntese agregada de IA e regras. Médias de notas declaradas e indícios da base aprovada. Categoria suprimida não significa ausência de risco.'};
-   await atomicWrite(path.join(dir,'department.json'),JSON.stringify(c.aggregate,null,2));
+   await this.saveArtifact(c.id,'department.json',this.backend?encryptJson(c.aggregate,this.key):JSON.stringify(c.aggregate,null,2));
   }
   s.done=true;
   return {reply:'Obrigada pela participação. Relato sintetizado sem reprodução integral. O RH recebe somente resultados coletivos protegidos.',finished:true};
  }
+ private async saveArtifact(cycleId:string,filename:string,content:string){
+  if(this.backend)this.artifacts.push({cycleId,filename,content});
+  else await atomicWrite(path.join(this.outputRoot,cycleId,filename),content);
+ }
  private findCycle(id:string){const c=this.cycles.get(id);if(!c)throw new ApiError(404,'NOT_FOUND','Pesquisa não encontrada');return c;}
- async report(id: string) {await this.initialize();await this.tail;const c=this.findCycle(id);return {complete:[...c.sessions.values()].filter(s=>s.done).length===c.expected,published:Boolean(c.aggregate),report:c.aggregate||null};}
+ async report(id: string) {
+  const work=this.tail.then(async()=>{await this.initialize();if(this.backend)await this.loadDatabase();const c=this.findCycle(id);return {complete:[...c.sessions.values()].filter(s=>s.done).length===c.expected,published:Boolean(c.aggregate),report:c.aggregate||null};});
+  this.tail=work.catch(()=>undefined);return work;
+ }
 }
