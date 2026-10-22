@@ -7,18 +7,25 @@ Este repositório contém uma implementação de desenvolvimento verificável, c
 ## Os três diretórios de negócio
 
 ```text
-database/                 Referências e taxonomia; leitura pelo motor
-  exemplo.json            Exemplo NÃO aprovado
-focus/                    Roteiros versionados; leitura pelo motor
-  exemplo.json            Pesquisa NÃO oficial, apenas demonstração
-survey/                   Saída privada; nunca servida por HTTP estático
-  <cycleId>/
-    <sha256-token>.json    Envelope cifrado da síntese individual
-    department.json       Resultado coletivo após conclusão e grupo mínimo
-backend/src/survey/       Código do motor, schemas, API e testes
+skills/
+  database/               Referências e taxonomia; leitura pelo motor
+    exemplo.json          Exemplo NÃO aprovado
+  focus/                  Roteiros versionados; leitura pelo motor
+    exemplo.json          Pesquisa NÃO oficial, apenas demonstração
+  survey/                 Saída privada; nunca servida por HTTP estático
+    .gitkeep              Único arquivo desta pasta versionado
+    <cycleId>/
+      <sha256-token>.json  Envelope cifrado da síntese individual
+      department.json     Resultado coletivo após conclusão e grupo mínimo
+  equilibra-nr1.skill.json Persona declarativa mantida no projeto
+backend/                  API, adaptadores e interface local
+  src/survey/             Motor, schemas e testes
+  src/config/paths.ts     Resolução centralizada dos caminhos
+packages/core/            Contratos compartilhados
+.old/                     Arquivo local de desenvolvimento; fora do Git e Docker
 ```
 
-São três pastas de negócio, não três pastas para todo o código. `backend`, `packages`, `docs` e `skills` permanecem como estrutura técnica/histórica. O painel e o simulador antigos foram removidos. `backend/public` contém somente a tela local de pareamento e seus dois assets. Rotas legadas de chat, widget, autenticação e relatórios não são expostas. Exemplos antigos em `docs` não são servidos nem integram o novo fluxo.
+Os três diretórios de negócio ficam dentro de `skills`, preservando a arquitetura reorganizada. `backend` e `packages` mantêm o código técnico. Material antigo, exemplos de outros domínios e documentação arquivada ficam somente em `.old`, que não é publicada no GitHub nem incluída no contexto Docker. A execução, o build e os testes não dependem dela. O painel e o simulador antigos foram removidos. `backend/public` contém somente a tela local de pareamento e seus dois assets. Rotas legadas de chat, widget, autenticação e relatórios não são expostas.
 
 O processo nunca escreve em `database` ou `focus`. Para garantir consulta somente, monte esses diretórios como volumes read-only e use uma identidade de serviço sem permissão de escrita. A convenção no código sozinha não substitui permissões do sistema operacional. `survey` deve ser um volume privado, fora do repositório publicado e dos diretórios estáticos. Os arquivos gerados estão no `.gitignore`.
 
@@ -55,7 +62,7 @@ Essa restrição é deliberada: perguntas geradas livremente por IA não permite
 
 ## Contrato de focus
 
-Consulte `focus/exemplo.json` e o schema executável em `backend/src/survey/schema.ts`. Campos desconhecidos são rejeitados.
+Consulte `skills/focus/exemplo.json` e o schema executável em `backend/src/survey/schema.ts`. Campos desconhecidos são rejeitados.
 
 | Campo | Uso |
 | --- | --- |
@@ -80,7 +87,7 @@ Cada JSON contém `id`, `version`, `approved`, `source` (URL), `theme`, `context
 
 Arquivos não aprovados são ignorados, exceto no modo de demonstração. Uma pesquisa não aprovada é recusada fora desse modo. Arquivo malformado interrompe a criação do ciclo. Não há crawler, scraping ou importação automática de PDF: desenvolvedores preparam referências estruturadas, revisam fidelidade e condições de uso e aprovam a versão.
 
-O link oficial de `database/exemplo.json` identifica a página normativa; não significa que a regra demonstrativa ou suas perguntas constem daquela página. Não promova esse arquivo para aprovado sem revisão efetiva. `approved` é um campo administrativo, não uma assinatura digital ou prova de validação.
+O link oficial de `skills/database/exemplo.json` identifica a página normativa; não significa que a regra demonstrativa ou suas perguntas constem daquela página. Não promova esse arquivo para aprovado sem revisão efetiva. `approved` é um campo administrativo, não uma assinatura digital ou prova de validação.
 
 ## Interpretação da IA e limites
 
@@ -108,12 +115,12 @@ O ciclo não fecha quando alguém recusa ou abandona. Não ajuste o denominador 
 
 Requisitos: Node.js 20+, npm e um provedor compatível com os adaptadores existentes. Instale com `npm install`; compile com `npm run build`; verifique o motor com `npm test`.
 
-Use `.env.example` como referência e configure no ambiente do backend:
+Use `backend/.env.example` como referência. Copie para `backend/.env` ou para `.env` na raiz e preencha os segredos. O exemplo arquivado em `.old` não é utilizado. A precedência é: variáveis já definidas no processo, depois `backend/.env`, depois `.env` da raiz. Valores existentes não são sobrescritos e segredos não são impressos:
 
 ```dotenv
 NODE_ENV=development
 PORT=4000
-SURVEY_ROOT=C:/caminho/absoluto/Equilibra-AI-Partial
+SURVEY_ROOT=../skills
 SURVEY_API_KEY=<segredo-aleatorio-com-pelo-menos-32-caracteres>
 SURVEY_ENCRYPTION_KEY=<64-caracteres-hexadecimais-aleatorios>
 SURVEY_MIN_GROUP=5
@@ -122,7 +129,11 @@ AI_PROVIDER=groq
 GROQ_API_KEY=<chave-do-provedor>
 ```
 
-Gere segredos independentes com `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Nunca versione as chaves. O comando gera um segredo, não modifica arquivos. Para iniciar: `npm run dev:backend`. O script executa no workspace backend; sem SURVEY_ROOT, o diretório de negócio padrão é o pai desse workspace. Use caminho absoluto para evitar ambiguidades ao incorporar em outro projeto.
+Gere segredos independentes com `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Nunca versione as chaves. O comando gera um segredo, não modifica arquivos. Para iniciar: `npm run dev:backend`. Sem SURVEY_ROOT, o diretório de negócio é sempre `skills` na raiz do projeto. Caminhos relativos configurados são resolvidos em relação a `backend`, independentemente do diretório de execução. Um caminho absoluto também é aceito. Por compatibilidade, um SURVEY_ROOT antigo apontando para a raiz do projeto é redirecionado para seu subdiretório `skills` quando os diretórios de negócio não existem diretamente na raiz. Não é necessário mover pastas novamente.
+
+Os mesmos caminhos funcionam no código TypeScript e no build `dist`. Após `npm run build`, inicie com `npm start -w backend` ou `node backend/dist/index.js` na raiz; dentro de `backend`, use `npm start`. O carregamento de ambiente e o acesso à base não dependem do diretório atual. Ao integrar diretamente, o argumento `root` de `SurveyEngine` deve apontar para a pasta que contém `database`, `focus` e `survey`, atualmente `skills`.
+
+Para sandbox em Docker, execute `docker build -f backend/Dockerfile -t equilibra-dev .` a partir da raiz e forneça os segredos por variáveis do container. O Dockerfile não executa migrações do banco legado, pois o motor atual usa arquivos e memória. O contexto exclui `.old`, `.env`, sessões WhatsApp e resultados gerados. O container usa `/app/skills`; monte `skills/database` e `skills/focus` como somente leitura e um volume privado em `/app/skills/survey`. A construção Docker não elimina o bloqueio de produção. A tela de pareamento continua restrita ao loopback; portas publicadas por Docker podem chegar com IP de bridge e serem recusadas. Use a execução nativa local para parear, sem relaxar essa proteção.
 
 A chave da API autentica chamadas servidor-servidor e, excepcionalmente, o operador na tela local de pareamento. Nunca embuta seu valor no código JavaScript, aplicativo do colaborador, logs ou URL. Na tela local ela é digitada pelo operador, mantida transitoriamente no campo e enviada por cabeçalho, sem localStorage ou cookies. CORS não é autenticação. O segredo de cifragem precisa de armazenamento seguro e cópia de recuperação; perdê-lo torna os relatórios individuais ilegíveis. Rotação com identificação de chave e KMS ainda não está implementada.
 
@@ -158,7 +169,7 @@ A interface tem apenas o campo de chave, os botões de conexão/desconexão, sta
 
 Endpoints: GET `/api/whatsapp/connection/status`, POST `/api/whatsapp/connection/connect` e POST `/api/whatsapp/connection/disconnect`. Exigem a mesma chave Bearer da API e acesso pelo computador local, sem proxy remoto. Requisições com Origin diferente da origem do servidor são bloqueadas. QR e estado são enviados com Cache-Control: no-store. O QR permite vincular a conta: mantenha a tela privada.
 
-O serviço `backend/src/services/whatsapp-pairing.service.ts` salva as credenciais de vínculo na pasta fixa `wa_pairing_session` do diretório de execução, normalmente `backend/wa_pairing_session`. Essa pasta é ignorada pelo Git, mas os arquivos do Baileys não são cifrados pela chave de relatórios. Restrinja suas permissões/ACL e use um número de teste. A sessão pode ser restaurada ao clicar Conectar após reinício; a aplicação não conecta sozinha ao iniciar. Falhas pedem nova tentativa manual, exceto o reinício de protocolo solicitado pelo WhatsApp imediatamente após a leitura do QR.
+O serviço `backend/src/services/whatsapp-pairing.service.ts` salva as credenciais de vínculo sempre em `backend/wa_pairing_session`, independentemente do diretório de execução. Essa pasta é ignorada pelo Git, mas os arquivos do Baileys não são cifrados pela chave de relatórios. Restrinja suas permissões/ACL e use um número de teste. A sessão pode ser restaurada ao clicar Conectar após reinício; a aplicação não conecta sozinha ao iniciar. Falhas pedem nova tentativa manual, exceto o reinício de protocolo solicitado pelo WhatsApp imediatamente após a leitura do QR.
 
 Antes de processar texto real, implemente mascaramento de dados pessoais, contrato e configuração de não treinamento/retenção do provedor e avaliação da transferência internacional. Atualmente a resposta textual atual pode ser enviada ao provedor configurado sem filtro completo de PII; é mais uma razão para aceitar somente dados fictícios nesta etapa.
 

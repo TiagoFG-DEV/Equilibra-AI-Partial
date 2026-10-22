@@ -10,12 +10,13 @@ import { SurveyEngine } from './survey/engine';
 import { surveyRouter } from './survey/routes';
 import { WhatsAppPairingService } from './services/whatsapp-pairing.service';
 import { pairingRouter, localPairingOnly } from './routes/pairing.routes';
+import { resolveSurveyRoot } from './config/paths';
 export function createApp(env: AppEnv) {
  const key=process.env.SURVEY_API_KEY;
  if(!key||key.length<32)throw new Error('SURVEY_API_KEY precisa de pelo menos 32 caracteres');
  if(env.NODE_ENV==='production')throw new Error('Produção bloqueada: este protótipo requer persistência durável, isolamento por tenant e protocolo humano homologado');
  const redis=createRedis(env);
- const engine=new SurveyEngine(path.resolve(process.env.SURVEY_ROOT||'..'),createAIProvider(env));
+ const engine=new SurveyEngine(resolveSurveyRoot(),createAIProvider(env));
  const app=express();app.disable('x-powered-by');app.use(securityHeaders());app.use(corsMiddleware(env));app.use(express.json({limit:'32kb'}));
  app.get('/health',(_req,res)=>res.json({ok:true,mode:'development'}));
  const publicDir=path.resolve(__dirname,'../public');

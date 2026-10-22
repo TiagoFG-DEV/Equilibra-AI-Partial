@@ -1,0 +1,11 @@
+.git
+.old
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/wa_session
+**/wa_pairing_session
+skills/survey/*
+!skills/survey/.gitkeep
+*.log

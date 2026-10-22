@@ -1,5 +1,11 @@
 import { z } from "zod";
-import "dotenv/config";
+import { config } from 'dotenv';
+import path from 'node:path';
+import { backendRoot, projectRoot } from './paths';
+
+// Ambiente do processo > backend/.env > .env da raiz; nunca imprime segredos.
+config({ path: path.join(backendRoot, '.env') });
+config({ path: path.join(projectRoot, '.env') });
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),

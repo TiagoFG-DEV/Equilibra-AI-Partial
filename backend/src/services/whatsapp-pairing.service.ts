@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import pino from 'pino';
 import QRCode from 'qrcode';
+import { backendRoot } from '../config/paths';
 
 /** Pareamento apenas: não lê mensagens nem ativa o motor legado. */
 export class WhatsAppPairingService {
@@ -11,7 +12,7 @@ export class WhatsAppPairingService {
   private status = 'disconnected';
   private qr: string | null = null;
   private error: string | null = null;
-  private readonly directory = path.resolve(process.cwd(), 'wa_pairing_session');
+  private readonly directory = path.join(backendRoot, 'wa_pairing_session');
 
   getStatus() { return { status: this.status, qrCodeDataUrl: this.qr, error: this.error }; }
 

@@ -9,8 +9,8 @@ test('consentimento, formato, limite de aprofundamento, conclusão, privacidade 
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'equilibra-test-'));
  await fs.mkdir(path.join(root,'focus'));await fs.mkdir(path.join(root,'database'));
  const repo=path.resolve(__dirname,'../../../');
- await fs.copyFile(path.join(repo,'focus/exemplo.json'),path.join(root,'focus/exemplo.json'));
- await fs.copyFile(path.join(repo,'database/exemplo.json'),path.join(root,'database/exemplo.json'));
+ await fs.copyFile(path.join(repo,'skills/focus/exemplo.json'),path.join(root,'focus/exemplo.json'));
+ await fs.copyFile(path.join(repo,'skills/database/exemplo.json'),path.join(root,'database/exemplo.json'));
  const provider={name:'test',chat:async()=>'{"riskIds":["sobrecarga-demo"]}',stream:async function*(){},embeddings:async()=>[]};
  const engine=new SurveyEngine(root,provider);const cycle=await engine.create('exemplo',5);
  let n=0;const send=(token:string,text:string)=>engine.message(cycle.cycleId,token,'m'+(++n),text) as Promise<any>;
@@ -31,7 +31,7 @@ test('consentimento, formato, limite de aprofundamento, conclusão, privacidade 
  const individual=await fs.readFile(path.join(root,'survey',cycle.cycleId,files.find(f=>f!=='department.json')!),'utf8');assert.ok(individual.includes('AES-256-GCM'));assert.ok(!individual.includes('questionId'));
 });
 test('recusa não conclui pesquisa e duplicidade não avança',async()=>{
- const root=path.resolve(__dirname,'../../../');
+ const root=path.resolve(__dirname,'../../../skills');
  const engine=new SurveyEngine(root,{name:'offline',chat:async()=>{throw Error();},stream:async function*(){},embeddings:async()=>[]});
  const c=await engine.create('exemplo',1),t=c.participantTokens[0];
  await engine.message(c.cycleId,t,'a','sair');
