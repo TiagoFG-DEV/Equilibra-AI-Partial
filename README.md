@@ -1,5 +1,7 @@
 # Equilibra — motor de pesquisas conversacionais
 
+**Documentação de uso da API:** consulte [API.md](API.md) para o checklist completo, instalação local, todas as variáveis, publicação no Render, integração com Vercel, endpoints, exemplos executáveis e solução de problemas. O contrato OpenAPI está em `/openapi.json` quando o servidor estiver rodando.
+
 Serviço TypeScript para integrar pesquisas ocupacionais ao site Equilibra e ao canal WhatsApp, com uma interface local mínima exclusivamente para pareamento. O objetivo é facilitar a coleta e a síntese para o RH, mantendo o controle do roteiro no servidor. A IA classifica indícios dentro de uma base cadastrada; não define notas, não inventa fatos, não decide conformidade e não substitui avaliação profissional.
 
 Este repositório oferece uma API HTTP versionada, publicável no Render para homologação com dados fictícios. `NODE_ENV=production` é aceito quando `SURVEY_OUTPUT_DIR` aponta para um caminho absoluto em volume persistente. O estado das pesquisas é cifrado e recuperado após reinício; cada projeto consumidor tem chave e diretório próprios. A implantação técnica não significa liberação para dados pessoais reais: gestão de direitos após conclusão, retenção, protocolo humano e validação metodológica ainda exigem trabalho. Não existe garantia absoluta de segurança ou conformidade com a LGPD.
@@ -192,6 +194,7 @@ Equilibra-AI-Partial/
 ├── package.json            Workspaces e comandos gerais do projeto
 ├── package-lock.json       Versões resolvidas das dependências
 ├── render.yaml             Blueprint do serviço e disco no Render
+├── API.md                  Manual completo de instalação, operação e integração HTTP
 └── README.md               Arquitetura, funcionamento e integração
 ```
 
