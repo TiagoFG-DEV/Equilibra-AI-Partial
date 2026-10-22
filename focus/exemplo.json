@@ -1,0 +1,10 @@
+{
+ "id":"exemplo","version":"0.1-demo","approved":false,
+ "methodology":"Demonstração técnica, sem validação científica ou atribuição ao governo.",
+ "privacyNotice":"Demonstração com dados fictícios. Participação voluntária. Texto pode ser enviado ao provedor de IA configurado; não informe dados pessoais. Respostas ficam transitoriamente em memória e sínteses cifradas no servidor. Não utilize dados reais. Canal humano e prazo de retenção devem ser definidos antes de uma operação real.",
+ "questions":[
+  {"id":"carga","theme":"demandas","text":"Como você avalia o equilíbrio da sua carga de trabalho? 0 representa situação muito insatisfatória e 10 muito satisfatória.","required":true,"source":"Autoria da equipe; exemplo não oficial","format":"number","higherIsBetter":true},
+  {"id":"contexto","theme":"demandas","text":"Descreva as condições de trabalho que influenciam sua avaliação, sem identificar pessoas.","required":true,"source":"Autoria da equipe; exemplo não oficial","format":"text"},
+  {"id":"melhoria","theme":"demandas","text":"Que mudança nas condições de trabalho ajudaria a equipe?","required":false,"source":"Autoria da equipe; exemplo não oficial","format":"text"}
+ ]
+}

@@ -5,13 +5,12 @@
   "description": "MODEL — base reutilizável para chatbots especializados (SaaS-ready)",
   "workspaces": [
     "backend",
-    "frontend",
     "packages/*"
   ],
   "scripts": {
     "dev:backend": "npm run dev -w backend",
-    "dev:frontend": "npm run dev -w frontend",
-    "build": "npm run build -w @model/core && npm run build -w backend && npm run build -w frontend",
+    "test": "npm run test -w backend",
+    "build": "npm run build -w @model/core && npm run build -w backend",
     "db:generate": "npm run db:generate -w backend",
     "db:migrate": "npm run db:migrate -w backend",
     "db:push": "npm run db:push -w backend",

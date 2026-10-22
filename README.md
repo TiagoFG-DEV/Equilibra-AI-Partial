@@ -1,250 +1,194 @@
-<div align="center">
+# Equilibra — motor de pesquisas conversacionais
 
-# EQUILIBRA IA
+Serviço TypeScript para integrar pesquisas ocupacionais ao site Equilibra e ao canal WhatsApp, com uma interface local mínima exclusivamente para pareamento. O objetivo é facilitar a coleta e a síntese para o RH, mantendo o controle do roteiro no servidor. A IA classifica indícios dentro de uma base cadastrada; não define notas, não inventa fatos, não decide conformidade e não substitui avaliação profissional.
 
-**Plataforma de Avaliacao de Riscos Psicossociais em Conformidade com a NR-1 e Governanca LGPD**
+Este repositório contém uma implementação de desenvolvimento verificável, com exemplos fictícios. NÃO está liberado para dados reais ou produção. O servidor recusa NODE_ENV=production porque faltam persistência durável, isolamento entre empresas, gestão de direitos após conclusão e homologação do protocolo humano. Não existe garantia técnica absoluta de segurança ou conformidade com a LGPD. Este README descreve o que funciona e o que ainda precisa ser implementado.
 
-*Arquitetura Headless com Multi-Provider LLM, Escuta Ativa Confidencial, k-Anonimato e Integracao Omnichannel (Web & WhatsApp Baileys / Meta Cloud API).*
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express.js-Backend-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![WhatsApp](https://img.shields.io/badge/WhatsApp-Baileys%20%26%20Cloud%20API-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://github.com/WhiskeySockets/Baileys)
-[![License](https://img.shields.io/badge/License-MIT-gray?style=for-the-badge)](LICENSE)
-
-<br/>
-
-[Visao Geral](#visao-geral) |
-[Fundamentacao NR-1](#fundamentacao-e-fatores-avaliados-nr-1) |
-[Arquitetura de Seguranca & LGPD](#arquitetura-de-seguranca--governanca-lgpd) |
-[Modulos do Sistema](#modulos-do-sistema) |
-[Integracao WhatsApp](#integracao-whatsapp-real--simulador) |
-[Configuracao e Execucao](#instalacao-e-execucao) |
-[Variaveis de Ambiente](#variaveis-de-ambiente) |
-[Pipeline de Consolidacao](#pipeline-de-consolidacao-e-expurgo)
-
----
-
-</div>
-
-## Visao Geral
-
-O **Equilibra IA** e uma solucao corporativa desenvolvida para atender as diretrizes da **Norma Regulamentadora no 1 (NR-1)** do Ministerio do Trabalho e Emprego, estruturando a identificacao, mensuracao e mitigacao de **riscos psicossociais ocupacionais**.
-
-Diferente de questionarios estaticos tradicionais de baixa adesao, o Equilibra atua por meio de um **canal conversacional empatico e institucional**. A inteligencia artificial conduz ativamente a escuta dos colaboradores, acolhe relatos qualitativos e extrai notas quantitativas (0 a 10) auditaveis por dimensao de risco, garantindo **preservacao de sigilo individual** e conformidade rigorosa com a **LGPD (Lei Geral de Protecao de Dados)**.
-
-### Pilares Fundamentais
-
-- **Escuta Ativa Humanizada sem Julgamentos:** Conducao estritamente profissional, sem diagnostico clinico, com acolhimento respeitoso e foco preventivo ocupacional.
-- **Protocolo de Crise Imutavel:** Deteccao automatica de termos de alto risco (autolesao, desespero, ameacas a integridade) com suspensao de pesquisa e orientacao aos canais oficiais (CVV 188 e SAMU 192).
-- **Governanca LGPD com k-Anonimato:** Exibicao de relatorios departamentais apenas quando o numero minimo de participantes for atingido (evitando a reidentificacao).
-- **Expurgo e Destruicao de Logs Individuais:** Ao consolidar as medias matematicas e planos de acao do departamento, as conversas individuais e numeros de contato sao expurgados da memoria, gerando um hash criptografico de auditoria.
-- **Motor LLM Multi-Provider:** Integracao com Groq (Llama 3.3 70B de altissima velocidade), Google Gemini, OpenAI e Ollama local, alem de suporte a Skills declarativas em JSON.
-
----
-
-## Fundamentacao e Fatores Avaliados (NR-1)
-
-A solucao se baseia nos dominios validados pelo modelo **COPSOQ II-Br** e nos termos de gerenciamento de riscos ocupacionais da **NR-1**:
-
-| Fator Psicossocial | Descricao e Escopo da Avaliacao | Escala |
-| :--- | :--- | :---: |
-| **Demandas e Ritmo de Trabalho** | Volume de servico, prazos, pressao por metas e impacto da sobrecarga de trabalho. | 0 a 10 |
-| **Autonomia e Decisao** | Margem de controle sobre as atividades, liberdade de propor melhorias e flexibilidade tecnica. | 0 a 10 |
-| **Apoio da Lideranca** | Clareza no direcionamento das metas, disponibilidade da gestao imediata e feedback construtivo. | 0 a 10 |
-| **Relacoes e Clima da Equipe** | Convivencia entre pares, espirito colaborativo, respeito interpessoal e integracao setorial. | 0 a 10 |
-| **Reconhecimento e Valorizacao** | Justica organizacional, percepcao de merecimento e reconhecimento formal dos esforcos. | 0 a 10 |
-| **Prevencao ao Assedio e Hostilidade** | Seguranca psicologica, ausencia de hostilidades, constrangimentos ou condutas abusivas. | 0 a 10 |
-
----
-
-## Arquitetura de Seguranca & Governanca LGPD
-
-O Equilibra IA foi projetado sob o conceito de **Privacy by Design**:
-
-```mermaid
-flowchart TD
-    subgraph Colaboradores
-        C1[Colaborador A - WhatsApp]
-        C2[Colaborador B - Web Chat]
-        C3[Colaborador C - Intranet]
-    end
-
-    subgraph Core Engine
-        DG[DomainGate / Guardrails]
-        PK[Skill Declarativa NR-1]
-        LLM[Multi-Provider LLM: Groq / Gemini / OpenAI]
-        CR[Detector de Crise de Vida]
-        SM[Extrator Matematico de Notas 0-10]
-    end
-
-    subgraph Governanca e Consolidacao
-        KA[Filtro de k-Anonimato: Minimo k Participantes]
-        CC[Calculo Matematico de Medias Departamentais]
-        AI_REC[Sintese Qualitativa e Acoes Sugeridas pela LLM]
-        EXP[Expurgo Total das Mensagens e Telefones]
-        HASH[Geracao de Audit Hash SHA-256]
-    end
-
-    subgraph Dashboard Executivo
-        DASH[Painel de RH: Heatmap Departamental e Planos de Acao]
-    end
-
-    C1 & C2 & C3 --> DG
-    DG --> PK --> LLM
-    LLM --> CR
-    LLM --> SM
-    SM --> KA
-    KA --> CC
-    CC --> AI_REC
-    AI_REC --> EXP
-    EXP --> HASH
-    HASH --> DASH
-```
-
-### Mecanismos de Protecao
-
-1. **Calculo Matematico Determinante:** As notas de 0 a 10 sao capturadas e validadas diretamente da declaracao do colaborador. A IA nao inventa nem deduz notas por conta propria.
-2. **Deteccao e Acolhimento em Crises:** Caso detectada situacao de vulnerabilidade extrema, o fluxo comum e interrompido imediatamente para fornecer os contatos de assistencia emergencial.
-3. **Expurgo Pos-Consolidacao:** Historicos brutos de mensagens e identificadores de sessao sao limpos da memoria assim que o relatorio departamental e homologado.
-4. **Audit Hash:** Cada relatorio consolidado armazena um hash criptografico imutavel que valida que a analise reflete o conjunto anonimizado daquele ciclo.
-
----
-
-## Modulos do Sistema
-
-O repositorio organiza servicos especializados em um monorepo modular em TypeScript:
+## Os três diretórios de negócio
 
 ```text
-Equilibra-AI/
-├── backend/
-│   ├── public/                    # Interfaces Web prontas para operacao
-│   │   ├── index.html             # Painel completo do RH: simulador, matriz de risco e consolidacao
-│   │   ├── styles.css             # Design System escuro, institucional e sem emojis
-│   │   ├── conectar-whatsapp.html # Central de pareamento QR Code com WhatsApp via Baileys
-│   │   ├── whatsapp.html          # Simulador interativo da interface do colaborador
-│   │   └── widget.js              # Script Headless injetavel com data-saas-*
-│   ├── src/
-│   │   ├── app.ts                 # Configuracao do Express, Middlewares de Seguranca e Rotas
-│   │   ├── config/env.ts          # Validacao rigorosa de variaveis de ambiente com Zod
-│   │   ├── middleware/            # Rate Limiting via Redis/Memory e Security Headers (Helmet/CORS)
-│   │   ├── providers/             # Adaptadores de LLM (Groq, Gemini, OpenAI, Ollama)
-│   │   ├── routes/
-│   │   │   ├── equilibra.routes.ts # Endpoints de sessao, envio de respostas e consolidacao de relatorio
-│   │   │   └── whatsapp.routes.ts  # Webhooks da Meta Cloud API e controles do Baileys
-│   │   └── services/
-│   │       ├── equilibra.service.ts # Regras de negocio da NR-1, maquina de estados e expurgo LGPD
-│   │       ├── baileys.service.ts   # Conexao com WhatsApp Web via QR Code (Socket Baileys)
-│   │       └── whatsapp.service.ts  # Normalizacao e roteamento de mensagens do WhatsApp
-│   └── prisma/schema.prisma       # Modelagem multi-tenant para gestao empresarial
-├── packages/
-│   └── core/                      # Tipos compartilhados, schemas Zod e DomainGate
-└── skills/
-    └── equilibra-nr1.skill.json   # Configuracao da persona, regras de tom e restricao formal
+database/                 Referências e taxonomia; leitura pelo motor
+  exemplo.json            Exemplo NÃO aprovado
+focus/                    Roteiros versionados; leitura pelo motor
+  exemplo.json            Pesquisa NÃO oficial, apenas demonstração
+survey/                   Saída privada; nunca servida por HTTP estático
+  <cycleId>/
+    <sha256-token>.json    Envelope cifrado da síntese individual
+    department.json       Resultado coletivo após conclusão e grupo mínimo
+backend/src/survey/       Código do motor, schemas, API e testes
 ```
 
----
+São três pastas de negócio, não três pastas para todo o código. `backend`, `packages`, `docs` e `skills` permanecem como estrutura técnica/histórica. O painel e o simulador antigos foram removidos. `backend/public` contém somente a tela local de pareamento e seus dois assets. Rotas legadas de chat, widget, autenticação e relatórios não são expostas. Exemplos antigos em `docs` não são servidos nem integram o novo fluxo.
 
-## Integracao WhatsApp (Real & Simulador)
+O processo nunca escreve em `database` ou `focus`. Para garantir consulta somente, monte esses diretórios como volumes read-only e use uma identidade de serviço sem permissão de escrita. A convenção no código sozinha não substitui permissões do sistema operacional. `survey` deve ser um volume privado, fora do repositório publicado e dos diretórios estáticos. Os arquivos gerados estão no `.gitignore`.
 
-O Equilibra suporta dois modos de mensageria via WhatsApp:
+## Fontes oficiais e significado de obrigatório
 
-### 1. WhatsApp Socket Direto (Baileys)
-- Permite conectar um numero corporativo de WhatsApp escaneando um **QR Code diretamente na interface web** (`/conectar-whatsapp.html`).
-- A IA inicia ativamente a conversa com o colaborador, conduz o questionario da NR-1, colhe notas e sincroniza com o dashboard em tempo real.
-- Nao depende de aprovacao de templates da Meta para homologacao interna ou testes departamentais.
+A [página oficial da NR-1 no MTE](https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/comissao-tripartite-partitaria-permanente/normas-regulamentadora/normas-regulamentadoras-vigentes/nr-1) reúne norma, guias e perguntas e respostas. A NR-1 não estabelece questionário único obrigatório. Perguntas frequentes sobre a norma não equivalem a itens de um instrumento de pesquisa validado.
 
-### 2. Meta WhatsApp Cloud API Oficial
-- Endpoints prontos para receber eventos de webhook (`GET /api/whatsapp/webhook` para verification token e `POST /api/whatsapp/webhook` para processamento de mensagens recebidas).
-- Envio estruturado de mensagens por meio da Graph API da Meta.
+Neste software, obrigatório significa `required: true` no roteiro aprovado. Não significa que a redação foi determinada pelo governo. Cada pergunta registra `source`; a equipe deve fornecer documento, versão e fundamento verificáveis. Nenhum exemplo deste repositório é apresentado como pergunta governamental, instrumento COPSOQ ou escala cientificamente validada.
 
-### 3. Simulador Integrado
-- O painel em `/whatsapp.html` oferece uma interface grafica que reproduz a tela do WhatsApp Web, permitindo demonstrar e testar jornadas inteiras sem custos de telefonia.
+As categorias cadastradas também não equivalem automaticamente a classes oficiais de risco. A integração com matriz de severidade/probabilidade, critérios profissionais e inventário do PGR ainda precisa ser especificada e validada. O motor atual produz indícios categorizados e médias de satisfação, sem transformar nota baixa automaticamente em classe legal de risco.
 
----
+## Quem controla a conversa
 
-## Instalacao e Execucao
+1. O backend do Equilibra cria um ciclo e informa quantas participações são esperadas.
+2. O motor congela em memória uma cópia da pesquisa e das referências elegíveis desse ciclo.
+3. São emitidos tokens aleatórios, um por convite. O serviço de mensageria do Equilibra mantém a relação telefone-token em ambiente separado.
+4. Antes de coletar, o motor apresenta o aviso da pesquisa e exige `participar`.
+5. O roteiro avança em ordem, exigindo o formato correto de cada pergunta obrigatória.
+6. Respostas aceitas passam por regras explícitas e, quando há referências, classificação da IA em IDs permitidos.
+7. Havendo indício alarmante compatível com a base, o motor abre até três aprofundamentos no tema e retorna ao roteiro.
+8. A conclusão individual exige chegar ao final do roteiro; perguntas obrigatórias não podem ser puladas. Recusar ou pausar não conta como conclusão.
+9. É gerada uma síntese individual cifrada, sem resposta integral, nome ou telefone.
+10. Quando todas as participações esperadas terminarem, o motor publica resultado coletivo somente se houver pelo menos k participantes.
 
-### Pre-requisitos
+O total é calculado por estados de participações únicas concluídas, não pelo número de arquivos encontrados na pasta. Contar arquivos permitiria incluir duplicatas, arquivos antigos, incompletos ou maliciosos. Um arquivo individual é consequência de uma conclusão válida. O arquivo de departamento não conta como participante.
 
-- Node.js versao 20 ou superior
-- npm versao 10 ou superior
-- PostgreSQL (opcional para execucao com persistencia completa via Prisma)
-- Chave de API de pelo menos um provedor de IA (Groq, Google Gemini ou OpenAI)
+## Perguntas do roteiro e aprofundamentos
 
-### 1. Clonagem e Instalacao de Dependencias
+`focus` aceita perguntas obrigatórias e extras cadastradas pelo site. Uma pergunta extra com `required: false` pode ser pulada com `pular`; se a empresa exigir sua resposta, deve marcar `required: true`. Perguntas adicionais de pesquisa e aprofundamentos dinâmicos são mecanismos diferentes.
 
-```bash
-git clone https://github.com/TiagoFG-DEV/Equilibra-AI-Partial.git
-cd Equilibra-AI-Partial
-npm install
+O modelo não escreve perguntas livres neste estágio. Ele identifica IDs de risco; o servidor seleciona redações previamente cadastradas em `database.risks[].followups`. Isso implementa aprofundamento condicionado sem permitir que o modelo invente conteúdo normativo. O limite de três é aplicado por tema durante toda a sessão, inclusive quando várias perguntas compartilham o tema. A resposta a um aprofundamento não abre uma cadeia de novos aprofundamentos. `pular` também funciona nos aprofundamentos.
+
+Essa restrição é deliberada: perguntas geradas livremente por IA não permitem garantir ausência de distorção. Uma futura adaptação de linguagem precisa preservar significado, fonte, formato e limites, com revisão e testes de equivalência.
+
+## Contrato de focus
+
+Consulte `focus/exemplo.json` e o schema executável em `backend/src/survey/schema.ts`. Campos desconhecidos são rejeitados.
+
+| Campo | Uso |
+| --- | --- |
+| id, version | Identificação e versão da pesquisa |
+| approved | Aprovação registrada pela equipe; exemplo usa false |
+| methodology | Referência metodológica e limitações |
+| privacyNotice | Aviso apresentado antes da coleta |
+| questions[].id | ID único no roteiro |
+| theme | Liga pergunta às referências do mesmo tema |
+| text, source | Redação e origem verificável |
+| required | Impede pular quando true |
+| format | number ou text |
+| higherIsBetter | Direção da escala; padrão true |
+
+Na versão atual `number` é sempre 0 a 10. Exemplos aceitos: `7`, `nota 7`, `2,5`, `7; comentário`, `nota 8: complemento`. `Trabalho 8 horas`, `11`, `-1`, dois números ambíguos ou uma frase sem nota explícita são recusados. O motor repete a pergunta e explica o formato. Um texto composto exclusivamente por número não satisfaz uma pergunta de formato `text`.
+
+Complementos são analisados no contexto da pergunta, mas não aparecem nos relatórios. Para números, a satisfação é a nota declarada ou `10 - nota` quando `higherIsBetter` é false. Para texto, satisfação é `null`: a IA não fabrica uma nota. As escalas precisam de âncoras claras na redação. A pertinência do relato é uma interpretação falível, não uma verificação de verdade.
+
+## Contrato de database
+
+Cada JSON contém `id`, `version`, `approved`, `source` (URL), `theme`, `context` e `risks`. Cada risco contém `id`, `label`, `alarmTerms` e até três `followups`. IDs de risco devem ser únicos na base carregada. Temas podem incluir saúde mental, condições físicas, integridade e outros definidos por profissionais; o programa não declara uma lista universal exigida pela norma.
+
+Arquivos não aprovados são ignorados, exceto no modo de demonstração. Uma pesquisa não aprovada é recusada fora desse modo. Arquivo malformado interrompe a criação do ciclo. Não há crawler, scraping ou importação automática de PDF: desenvolvedores preparam referências estruturadas, revisam fidelidade e condições de uso e aprovam a versão.
+
+O link oficial de `database/exemplo.json` identifica a página normativa; não significa que a regra demonstrativa ou suas perguntas constem daquela página. Não promova esse arquivo para aprovado sem revisão efetiva. `approved` é um campo administrativo, não uma assinatura digital ou prova de validação.
+
+## Interpretação da IA e limites
+
+O prompt entrega as referências do tema e a resposta atual como dados. A IA só pode retornar `{"riskIds":[]}`. O schema rejeita campos extras e IDs fora da lista permitida. Não se aceita texto livre produzido pelo modelo em relatórios, instruções de tratamento, diagnóstico ou notas inferidas.
+
+Regras por termos alarmantes fornecem um fallback conservador. Se o provedor falhar, devolver JSON inválido ou categoria não cadastrada, o sistema mantém apenas os indícios das regras e informa a indisponibilidade no registro. Não preenche lacunas com fatos inventados. Termos simples podem produzir falsos positivos e negativos, inclusive por negação ou contexto; o exemplo não é um detector clínico homologado.
+
+A redação da síntese é um template controlado que apresenta quantidades e limitações, marcado como análise de IA e regras. Não é uma redação livre do LLM. Isso reduz vazamento e alucinação, mas não torna a classificação infalível. A classificação deve ser testada com exemplos anotados por profissionais antes de dados reais. A versão do provedor é registrada por nome; versionamento preciso de modelo, prompt e parâmetros em trilha assinada é uma evolução pendente.
+
+## Arquivos survey e publicação
+
+O relatório individual contém versão de schema, versão da pesquisa, metodologia, versões da base, nome do provedor, ressalva de análise automatizada, tabela por pergunta e síntese geral. Cada linha informa pergunta, tema, satisfação ou null, IDs de indício e estado da análise. Não contém fala bruta, telefone, nome ou token do convite.
+
+Esse objeto é cifrado em AES-256-GCM com IV aleatório. O JSON no disco contém `encryption`, `iv`, `tag` e `ciphertext`. O nome usa SHA-256 do token aleatório. O token não é um telefone e não deve ser derivado dele. Isso é pseudonimização, não prova de anonimização irreversível.
+
+O site/RH não recebe um endpoint de relatórios individuais. Entregar uma síntese por pessoa ao RH pode permitir reidentificação mesmo sem nome; por isso os arquivos individuais permanecem no domínio privado de processamento. A futura transferência servidor-servidor deve ser para um cofre técnico separado dos usuários do RH.
+
+O resultado coletivo é `department.json`. Para cada pergunta numérica calcula a média somente quando ao menos k respostas numéricas válidas existirem; caso contrário retorna null. Categorias só aparecem se pelo menos k pessoas as apresentarem naquela pergunta. Não publica frequência exata de categoria rara. Ausência de categoria publicada não significa ausência de risco.
+
+`SURVEY_MIN_GROUP` tem piso técnico 5 nesta implementação. Esse valor não é exigência fixa da LGPD nem garantia de anonimato. Supressão complementar, cruzamentos, comparações entre ciclos e ataques por grupos sobrepostos ainda não estão implementados. Não exponha múltiplos recortes em produção antes de implementar essas proteções.
+
+O ciclo não fecha quando alguém recusa ou abandona. Não ajuste o denominador silenciosamente para produzir um relatório. Política de encerramento por prazo, desistências, elegibilidade e não resposta exige implementação explícita. Ciclos menores que k podem terminar, mas não publicam relatório coletivo.
+
+## Executar em desenvolvimento
+
+Requisitos: Node.js 20+, npm e um provedor compatível com os adaptadores existentes. Instale com `npm install`; compile com `npm run build`; verifique o motor com `npm test`.
+
+Use `.env.example` como referência e configure no ambiente do backend:
+
+```dotenv
+NODE_ENV=development
+PORT=4000
+SURVEY_ROOT=C:/caminho/absoluto/Equilibra-AI-Partial
+SURVEY_API_KEY=<segredo-aleatorio-com-pelo-menos-32-caracteres>
+SURVEY_ENCRYPTION_KEY=<64-caracteres-hexadecimais-aleatorios>
+SURVEY_MIN_GROUP=5
+SURVEY_ALLOW_DEMO=true
+AI_PROVIDER=groq
+GROQ_API_KEY=<chave-do-provedor>
 ```
 
-### 2. Configuracao do Ambiente
+Gere segredos independentes com `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Nunca versione as chaves. O comando gera um segredo, não modifica arquivos. Para iniciar: `npm run dev:backend`. O script executa no workspace backend; sem SURVEY_ROOT, o diretório de negócio padrão é o pai desse workspace. Use caminho absoluto para evitar ambiguidades ao incorporar em outro projeto.
 
-Crie o arquivo `.env` na raiz ou dentro da pasta `backend/` a partir do exemplo fornecido:
+A chave da API autentica chamadas servidor-servidor e, excepcionalmente, o operador na tela local de pareamento. Nunca embuta seu valor no código JavaScript, aplicativo do colaborador, logs ou URL. Na tela local ela é digitada pelo operador, mantida transitoriamente no campo e enviada por cabeçalho, sem localStorage ou cookies. CORS não é autenticação. O segredo de cifragem precisa de armazenamento seguro e cópia de recuperação; perdê-lo torna os relatórios individuais ilegíveis. Rotação com identificação de chave e KMS ainda não está implementada.
 
-```bash
-cp .env.example .env
+## API e integração ao site Equilibra
+
+Todas as rotas `/api` exigem `Authorization: Bearer <SURVEY_API_KEY>`. `GET /health` é público e não retorna conteúdo pessoal.
+
+Criar ciclo: `POST /api/surveys` com `{"focusId":"exemplo","expectedParticipants":5}`. A resposta contém `cycleId`, tokens dos convidados e aviso de privacidade. O backend do site deve armazenar os tokens em cofre e encaminhar convites pelo serviço de mensageria. Não repasse a lista ao RH.
+
+Enviar resposta: `POST /api/surveys/<cycleId>/messages` com:
+
+```json
+{"participantToken":"<token-aleatorio>","messageId":"id-unico-da-mensagem","text":"participar"}
 ```
 
-### 3. Execucao do Servidor Backend
+Encaminhe `reply` ao participante pelo mesmo canal. Envie cada nova mensagem com novo ID e preserve o ID em redelivery. Repetição de ID retorna `duplicate: true` e não avança a pesquisa. O deduplicador é em memória; IDs consumidos em falha não são reaplicados. Retry após erro exige novo ID e verificação de estado; não há promessa de entrega exatamente uma vez. Uma fila durável, outbox e armazenamento transacional ainda são necessários.
 
-```bash
-# Executar o backend com hot-reload (TypeScript)
-npm run dev:backend
-```
+Consultar resultado: `GET /api/surveys/<cycleId>/report` retorna `complete`, `published` e `report`. Enquanto incompleto ou abaixo de k, `report` é null. Não retorna lista de respondentes ou progresso por pessoa. O backend Equilibra deve vincular o ciclo à empresa e ao departamento no domínio de gestão.
 
-O servidor sera iniciado em `http://localhost:3000`.
+Para incorporar o código, mantenha o módulo `backend/src/survey`, seu contrato de provedor e Zod; instancie `SurveyEngine(root, provider)` e monte `surveyRouter(engine)` atrás da autenticação de serviço. O motor não conhece telefone, nome, CNPJ ou gestor. Um token concede contexto de uma participação apenas quando acompanhado pela chave de serviço. Esta versão possui uma chave global e não implementa segregação multiempresa; opere apenas como sandbox de uma organização fictícia.
 
-### 4. Acesso as Interfaces
+## Integração WhatsApp
 
-- **Painel do RH & Central de Analise:** `http://localhost:3000/index.html`
-- **Conectar WhatsApp Real (QR Code):** `http://localhost:3000/conectar-whatsapp.html`
-- **Simulador de Tela do Colaborador:** `http://localhost:3000/whatsapp.html`
-- **Verificacao de Saude da API:** `http://localhost:3000/health`
+O motor é independente do transporte. Os adaptadores antigos Meta/Baileys permanecem como código legado e não estão ligados ao novo app. Não utilize os endpoints antigos: eles não implementam o novo contrato nem suas restrições. O pareamento usa um serviço dedicado, sem ativar esses fluxos legados.
 
----
+O serviço de mensageria do site deve validar assinatura do webhook oficial, deduplicar o ID recebido, resolver telefone no cofre e enviar apenas token, texto e messageId ao motor. A resposta textual do motor volta pelo adaptador. Número e identidade nunca devem ser concatenados no texto enviado à IA. Convites e mensagens fora da janela do WhatsApp dependem das políticas e templates vigentes da Meta. Disparos e coleta real pelo WhatsApp ainda não estão integrados ao novo motor.
 
-## Variaveis de Ambiente
+### Tela local para conectar o WhatsApp
 
-As principais configuracoes disponiveis no `.env`:
+Com o servidor iniciado, abra `http://localhost:4000/conectar-whatsapp.html` (ou a porta configurada em PORT). Digite a SURVEY_API_KEY do seu ambiente e clique em Conectar. No celular, abra WhatsApp, Aparelhos conectados, Conectar um aparelho e leia o QR exibido. A tela atualiza o código e o estado automaticamente. Ao conectar, aparece WhatsApp conectado. Desconectar encerra o vínculo e remove as credenciais locais deste adaptador; não inicia novo pareamento automaticamente.
 
-| Variavel | Descricao | Padrao |
-| :--- | :--- | :---: |
-| `PORT` | Porta de execucao do servidor HTTP | `3000` |
-| `NODE_ENV` | Ambiente de execucao (`development`, `production`) | `development` |
-| `AI_PROVIDER` | Provedor de IA ativo (`groq`, `gemini`, `openai`, `ollama`) | `groq` |
-| `GROQ_API_KEY` | Chave de autenticacao na Groq Cloud | - |
-| `GROQ_MODEL` | Modelo de LLM na Groq | `llama-3.3-70b-versatile` |
-| `GEMINI_API_KEY` | Chave de autenticacao da Google AI Studio | - |
-| `OPENAI_API_KEY` | Chave de API da OpenAI | - |
-| `SKILLS_DIR` | Diretorio com arquivos declarativos de Skills | `../skills` |
-| `WHATSAPP_SIMULATION_MODE` | Ativa simulador sem envio real | `true` |
-| `WHATSAPP_TOKEN` | Bearer Token da Meta Cloud API | - |
-| `WHATSAPP_PHONE_NUMBER_ID` | Identificador do numero na Meta Cloud API | - |
-| `WHATSAPP_VERIFY_TOKEN` | Token de verificacao do Webhook da Meta | `equilibra-nr1-secret-token` |
-| `REDIS_URL` | Instancia Redis para Rate Limiter distribuido | - |
+A interface tem apenas o campo de chave, os botões de conexão/desconexão, status e QR. Nenhuma pesquisa, convite ou resposta automática é disparada. Mensagens não são encaminhadas ao motor nem registradas pelo serviço de pareamento. Não há leitura de histórico solicitada pelo adaptador. Baileys é uma conexão via protocolo WhatsApp Web, distinta da Cloud API oficial da Meta.
 
----
+Endpoints: GET `/api/whatsapp/connection/status`, POST `/api/whatsapp/connection/connect` e POST `/api/whatsapp/connection/disconnect`. Exigem a mesma chave Bearer da API e acesso pelo computador local, sem proxy remoto. Requisições com Origin diferente da origem do servidor são bloqueadas. QR e estado são enviados com Cache-Control: no-store. O QR permite vincular a conta: mantenha a tela privada.
 
-## Pipeline de Consolidacao e Expurgo
+O serviço `backend/src/services/whatsapp-pairing.service.ts` salva as credenciais de vínculo na pasta fixa `wa_pairing_session` do diretório de execução, normalmente `backend/wa_pairing_session`. Essa pasta é ignorada pelo Git, mas os arquivos do Baileys não são cifrados pela chave de relatórios. Restrinja suas permissões/ACL e use um número de teste. A sessão pode ser restaurada ao clicar Conectar após reinício; a aplicação não conecta sozinha ao iniciar. Falhas pedem nova tentativa manual, exceto o reinício de protocolo solicitado pelo WhatsApp imediatamente após a leitura do QR.
 
-Quando um ciclo departamental e encerrado pelo RH, o fluxo da API (`POST /api/equilibra/consolidate`) executa sequencialmente:
+Antes de processar texto real, implemente mascaramento de dados pessoais, contrato e configuração de não treinamento/retenção do provedor e avaliação da transferência internacional. Atualmente a resposta textual atual pode ser enviada ao provedor configurado sem filtro completo de PII; é mais uma razão para aceitar somente dados fictícios nesta etapa.
 
-1. **Validacao de k-Anonimato:** Verifica se o departamento atingiu a amostra minima segura.
-2. **Tabulacao Estatistica:** Calcula a media aritmetica auditavel por dimensao (Demandas, Autonomia, Lideranca, Clima, Reconhecimento e Assedio).
-3. **Classificacao Automatica de Risco:**
-   - **Risco Alto:** Media inferior a 5.0
-   - **Risco Medio:** Media entre 5.0 e 6.9
-   - **Risco Baixo:** Media igual ou superior a 7.0
-4. **Sintese de Recomendacoes e Planos de Acao:** O provedor LLM recebe apenas os dados estatisticos e relatos sintetizados anonimos para redigir intervencoes preventivas com prazos e impactos sugeridos.
-5. **Expurgo Criptografico dos Dados Individuais:** Os objetos de sessao, numeros e transcricoes sao descarregados da memoria e substituidos pelo Hash SHA-256 do relatorio consolidado.
+## Privacidade, participação e exceções
 
----
+O aviso deve explicar finalidade, controlador, operador, processadores, canal humano, retenção e direitos. Nesta versão `participar` registra instante em memória; não existe ledger durável do aceite ou versão jurídica. Esse mecanismo de produto não resolve por si a base legal adequada ao vínculo de emprego.
 
-## Licenca
+`ajuda` mostra comandos; `meus dados` mostra aviso e informações mínimas da sessão; `pausar` suspende; `retomar` restaura; `sair` ou `apagar` antes da conclusão removem linhas da memória e encerram a participação. Depois da conclusão, o comando orienta usar o canal de privacidade: remoção do arquivo cifrado e tratamento dos direitos ainda precisam de uma fila autenticada e auditável. Não há promessas falsas de apagamento completo.
 
-Este projeto e distribuido sob a licenca **MIT**. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+A detecção demonstrativa de risco imediato suspende a coleta e orienta ajuda humana. Não implementa emergência, triagem, denúncia formal ou protocolo de Compliance. Não gera protocolo fictício. Uma mensagem fixa validada, atendimento humano, diferenciação de relato espontâneo, denúncia e consentimento específico precisam existir antes de qualquer conversa real.
+
+As respostas brutas não são gravadas pelo novo motor nem incluídas em logs de erro. Ainda podem existir em trânsito, memória de processos/provedor e infraestrutura de mensageria; configure observabilidade para excluir payloads e restrinja acesso a dumps. Resultados em memória permanecem até o encerramento do processo; não há TTL/expurgo automático implementado. Arquivos cifrados permanecem até tratamento operacional. Defina e implemente prazos e exclusão em backups antes da operação real.
+
+## Desenvolvimento e testes
+
+O código executável central está em `schema.ts` (contratos), `engine.ts` (estados, classificação e saída), `routes.ts` (API) e `app.ts` (montagem e proteção). Alterações de comportamento devem manter os limites no servidor, não apenas no prompt. Os testes utilizam provedor falso e dados fictícios, verificando consentimento, validação numérica, três aprofundamentos no tema, retorno ao roteiro, conclusão, cifragem, publicação após cinco conclusões, ausência de fala/token no agregado, recusa e deduplicação.
+
+Há serialização por ciclo para evitar avanço concorrente dentro de um processo. Não há coordenação entre instâncias, persistência de estado, retomada após reinício ou transação atômica envolvendo todos os arquivos. Reiniciar descarta sessões e índices; arquivos já produzidos não são reimportados. Escrita robusta com arquivo temporário e rename, recuperação de falhas e reconciliação são pendências antes de produção.
+
+Para adicionar tema: preparar referência estruturada, revisar taxonomia/gatilhos/roteiros com profissionais, atribuir IDs e versão, adicionar perguntas no focus e testar sem dados reais. Para alterar escala, modifique schema, parser e média juntos; nunca mude apenas o prompt. Para trocar provedor, implemente a interface AIProvider e teste o contrato de saída estrito. Não permita upload do RH diretamente em database nem aprovação automática de conteúdo produzido pela IA.
+
+## Próximas implementações necessárias para uso real
+
+- Persistência transacional cifrada de estado, consentimento, fila, idempotência e eventos de auditoria.
+- Autorização por tenant/ciclo, separação de credenciais, cofre de identidade e integração segura com o site.
+- Mascaramento de PII e testes de vazamento/injeção, isolamento, restauração e expurgo.
+- Direitos após conclusão, retenção por finalidade, operação de backups e incidentes.
+- Metodologia validada, critérios de risco versionados, classificação testada contra profissionais e intervenções humanas.
+- Protocolo de crise/denúncia homologado e transporte WhatsApp oficial validado.
+- Privacidade contra grupos sobrepostos, supressão complementar e comparações longitudinais.
+- Gestão de segredos, TLS, permissões/ACL no Windows, KMS e revisão de dependências.
+
+As opções `mode` de arquivos ajudam em sistemas Unix, mas não garantem ACLs no Windows. Configure ACLs do volume explicitamente. O bloqueio de produção protege contra uso acidental; não é certificação. A liberação exige revisar e implementar as pendências, além de validação jurídica, de SST, psicológica e operacional apropriadas ao contexto.

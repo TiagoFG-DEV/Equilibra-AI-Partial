@@ -1,0 +1,6 @@
+{
+  "id": "sobrecarga-demo", "version": "0.1-demo", "approved": false,
+  "source": "https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/comissao-tripartite-partitaria-permanente/normas-regulamentadora/normas-regulamentadoras-vigentes/nr-1",
+  "theme": "demandas", "context": "Exemplo técnico não validado. O link aponta para a norma, não autentica estes critérios ou perguntas. Não há classificação oficial implementada.",
+  "risks": [{"id":"sobrecarga-demo","label":"Indício de sobrecarga (demonstração)","alarmTerms":["sobrecarga insustentável"],"followups":["Com que frequência essa situação ocorre no trabalho? Não informe nomes.","Como essa situação interfere nas condições de realização do trabalho?","Que condição da organização do trabalho contribui para essa situação?"]}]
+}

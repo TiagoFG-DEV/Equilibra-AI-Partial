@@ -12,4 +12,8 @@ scratch/
 frontend/dist/
 backend/dist/
 packages/*/dist/
+survey/*
+!survey/.gitkeep
+wa_pairing_session/
+backend/wa_pairing_session/
 

@@ -1,73 +1,32 @@
-import express from "express";
-import path from "node:path";
-import type { AppEnv } from "./config/env";
-import { securityHeaders, corsMiddleware, sanitizeChatBody } from "./middleware/security";
-import { createApiRateLimiter } from "./middleware/rate-limit";
-import { createRedis } from "./lib/redis";
-import { createAIProvider } from "./providers/provider-factory";
-import { SkillLoader } from "./services/skill-loader";
-import { ChatService } from "./services/chat.service";
-import { AuthService } from "./services/auth.service";
-import { EquilibraService } from "./services/equilibra.service";
-import { healthRouter } from "./routes/health.routes";
-import { authRouter } from "./routes/auth.routes";
-import { skillsRouter } from "./routes/skills.routes";
-import { chatRouter } from "./routes/chat.routes";
-import { conversationsRouter } from "./routes/conversations.routes";
-import { widgetRouter } from "./routes/widget.routes";
-import { equilibraRouter } from "./routes/equilibra.routes";
-import { WhatsAppService } from "./services/whatsapp.service";
-import { whatsAppRouter } from "./routes/whatsapp.routes";
-import type Redis from "ioredis";
-
-import { BaileysService } from "./services/baileys.service";
-
-export type AppContext = {
-  env: AppEnv;
-  redis: Redis | null;
-};
-
+import express from 'express';
+import path from 'node:path';
+import { timingSafeEqual } from 'node:crypto';
+import type { AppEnv } from './config/env';
+import { securityHeaders, corsMiddleware } from './middleware/security';
+import { createApiRateLimiter } from './middleware/rate-limit';
+import { createRedis } from './lib/redis';
+import { createAIProvider } from './providers/provider-factory';
+import { SurveyEngine } from './survey/engine';
+import { surveyRouter } from './survey/routes';
+import { WhatsAppPairingService } from './services/whatsapp-pairing.service';
+import { pairingRouter, localPairingOnly } from './routes/pairing.routes';
 export function createApp(env: AppEnv) {
-  const redis = createRedis(env);
-  const skillsDir = path.resolve(process.cwd(), env.SKILLS_DIR);
-  const skillLoader = new SkillLoader(skillsDir);
-  const provider = createAIProvider(env);
-  const chatService = new ChatService(skillLoader, provider);
-  const authService = new AuthService(env);
-  const equilibraService = new EquilibraService(skillLoader, provider);
-  const whatsAppService = new WhatsAppService(env, equilibraService);
-  const baileysService = new BaileysService(whatsAppService);
-  whatsAppService.setBaileysService(baileysService);
-
-  const app = express();
-  app.disable("x-powered-by");
-  app.use(securityHeaders());
-  app.use(corsMiddleware(env));
-  app.use(express.json({ limit: "512kb" }));
-
-  const limiter = createApiRateLimiter(redis, env);
-
-  app.use(healthRouter());
-
-  const api = express.Router();
-  api.use(limiter);
-  api.use("/auth", authRouter(authService));
-  api.use(skillsRouter(skillLoader));
-  api.use("/widget", widgetRouter(chatService, skillLoader));
-  api.use("/equilibra", equilibraRouter(equilibraService));
-  api.use("/whatsapp", whatsAppRouter(whatsAppService, env, baileysService));
-  api.use(sanitizeChatBody);
-  api.use(chatRouter(chatService, authService));
-  api.use(conversationsRouter(authService));
-
-  app.use(express.static(path.join(process.cwd(), "public"))); // Serve o widget.js e a interface Equilibra
-  app.use("/api", api);
-
-  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    void _next;
-    console.error(err);
-    res.status(500).json({ error: "Erro interno" });
-  });
-
-  return { app, redis, skillLoader };
+ const key=process.env.SURVEY_API_KEY;
+ if(!key||key.length<32)throw new Error('SURVEY_API_KEY precisa de pelo menos 32 caracteres');
+ if(env.NODE_ENV==='production')throw new Error('Produção bloqueada: este protótipo requer persistência durável, isolamento por tenant e protocolo humano homologado');
+ const redis=createRedis(env);
+ const engine=new SurveyEngine(path.resolve(process.env.SURVEY_ROOT||'..'),createAIProvider(env));
+ const app=express();app.disable('x-powered-by');app.use(securityHeaders());app.use(corsMiddleware(env));app.use(express.json({limit:'32kb'}));
+ app.get('/health',(_req,res)=>res.json({ok:true,mode:'development'}));
+ const publicDir=path.resolve(__dirname,'../public');
+ for(const file of ['conectar-whatsapp.html','pairing.css','pairing.js']) {
+  app.get('/'+file,localPairingOnly,(_req,res)=>res.sendFile(path.join(publicDir,file)));
+ }
+ const pairing=new WhatsAppPairingService();
+ app.use('/api',createApiRateLimiter(redis,env),(req,res,next)=>{
+  const supplied=Buffer.from(req.get('authorization')||''),expected=Buffer.from(`Bearer ${key}`);
+  if(supplied.length!==expected.length||!timingSafeEqual(supplied,expected)){res.status(401).json({error:'Não autorizado'});return;}next();
+ }, (()=>{const router=express.Router();router.use('/whatsapp/connection',pairingRouter(pairing));router.use(surveyRouter(engine));return router;})());
+ app.use((_err:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{res.status(500).json({error:'Falha interna'});});
+ return {app,redis};
 }
