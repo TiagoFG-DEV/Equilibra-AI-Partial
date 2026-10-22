@@ -38,3 +38,20 @@ test('recusa não conclui pesquisa e duplicidade não avança',async()=>{
  assert.deepEqual(await engine.message(c.cycleId,t,'a','participar'),{duplicate:true});
  assert.equal(engine.report(c.cycleId).complete,false);
 });
+test('apresentação fixa precede aceite e pode ser iniciada sem mensagem do participante',async()=>{
+ process.env.SURVEY_ENCRYPTION_KEY='a'.repeat(64);process.env.SURVEY_ALLOW_DEMO='true';
+ let calls=0;
+ const engine=new SurveyEngine(path.resolve(__dirname,'../../../skills'),{name:'test',chat:async()=>{calls++;return '{}';},stream:async function*(){},embeddings:async()=>[]});
+ const c=await engine.create('exemplo',2),[a,b]=c.participantTokens;
+ assert.match(c.openingMessage,/agente de inteligência artificial/);
+ const first=await engine.message(c.cycleId,a,'first','participar') as any;
+ assert.match(first.reply,/agente de inteligência artificial/);
+ assert.ok(!first.reply.includes('Como você avalia'));
+ const question=await engine.message(c.cycleId,a,'second','participar') as any;
+ assert.match(question.reply,/Como você avalia/);
+ const invite=await engine.start(c.cycleId,b);
+ assert.match((invite as any).reply,/Vou conduzir uma pesquisa/);
+ assert.match((await engine.message(c.cycleId,b,'accept','participar') as any).reply,/Como você avalia/);
+ assert.deepEqual(await engine.start(c.cycleId,b),{started:false});
+ assert.equal(calls,0);
+});

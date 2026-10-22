@@ -4,8 +4,9 @@ import { randomUUID, randomBytes, createCipheriv, createHash } from 'node:crypto
 import { z } from 'zod';
 import { Focus, Knowledge, type FocusType, type KnowledgeType } from './schema';
 import type { AIProvider } from '../providers/ai-provider.types';
+import { AI_INTRODUCTION, openingMessage } from './introduction';
 type Row = { questionId: string; theme: string; satisfaction: number | null; riskIds: string[]; analysisStatus: string };
-type Session = { consentAt?: string; index: number; rows: Row[]; counts: Record<string, number>; pending: string[]; done: boolean; paused: boolean; revoked: boolean; messages: Set<string> };
+type Session = { introduced?: boolean; consentAt?: string; index: number; rows: Row[]; counts: Record<string, number>; pending: string[]; done: boolean; paused: boolean; revoked: boolean; messages: Set<string> };
 type Cycle = { id: string; focus: FocusType; knowledge: KnowledgeType[]; expected: number; sessions: Map<string, Session>; aggregate?: unknown; tail: Promise<unknown> };
 const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export class SurveyEngine {
@@ -34,7 +35,17 @@ export class SurveyEngine {
   const id = randomUUID(); const sessions = new Map<string,Session>();
   for (let i=0;i<expected;i++) sessions.set(randomBytes(32).toString('hex'),{ index:0, rows:[],counts:{},pending:[],done:false,paused:false,revoked:false,messages:new Set() });
   this.cycles.set(id,{id,focus,knowledge,expected,sessions,tail:Promise.resolve()});
-  return {cycleId:id,participantTokens:[...sessions.keys()],privacyNotice:focus.privacyNotice,demo};
+  return {cycleId:id,participantTokens:[...sessions.keys()],privacyNotice:focus.privacyNotice,openingMessage:openingMessage(focus.privacyNotice),demo};
+ }
+ async start(id: string, token: string) {
+  const c=this.cycles.get(id); if(!c)throw new Error('Ciclo inexistente');
+  const work=c.tail.then(()=>{
+   const s=c.sessions.get(token);if(!s)throw new Error('Participante inexistente');
+   if(s.revoked||s.paused||s.done||s.consentAt)return {started:false};
+   s.introduced=true;
+   return {reply:openingMessage(c.focus.privacyNotice),started:true};
+  });
+  c.tail=work.catch(()=>undefined);return work;
  }
  async message(id: string, token: string, messageId: string, text: string) {
   const c = this.cycles.get(id); if (!c) throw new Error('Ciclo inexistente');
@@ -48,6 +59,17 @@ export class SurveyEngine {
   const s=c.sessions.get(token); if (!s) throw new Error('Participante inexistente');
   if (s.messages.has(mid)) return {duplicate:true}; s.messages.add(mid);
   const input=text.trim(), cmd=normalize(input);
+  if(!s.introduced){
+   s.introduced=true;
+   if(!['ajuda','meus dados','sair','apagar','pausar'].includes(cmd))return {reply:openingMessage(c.focus.privacyNotice)};
+   // Direitos continuam disponíveis no primeiro contato, com apresentação explícita.
+   const result=await this.processContent(c,s,token,text) as {reply?:string};
+   return {...result,reply:AI_INTRODUCTION+'\n\n'+result.reply};
+  }
+  return this.processContent(c,s,token,text);
+ }
+ private async processContent(c:Cycle,s:Session,token:string,text:string):Promise<unknown>{
+  const input=text.trim(),cmd=normalize(input);
   if (cmd==='ajuda') return {reply:'Comandos: ajuda, meus dados, apagar, sair, pausar e retomar. Participação voluntária. Não informe nomes, contatos nem detalhes identificáveis.'};
   if (cmd==='meus dados') return {reply:c.focus.privacyNotice,consentAt:s.consentAt,answered:s.rows.length};
   if (cmd==='sair'||cmd==='apagar') {

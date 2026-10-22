@@ -4,6 +4,20 @@ Serviço TypeScript para integrar pesquisas ocupacionais ao site Equilibra e ao 
 
 Este repositório contém uma implementação de desenvolvimento verificável, com exemplos fictícios. NÃO está liberado para dados reais ou produção. O servidor recusa NODE_ENV=production porque faltam persistência durável, isolamento entre empresas, gestão de direitos após conclusão e homologação do protocolo humano. Não existe garantia técnica absoluta de segurança ou conformidade com a LGPD. Este README descreve o que funciona e o que ainda precisa ser implementado.
 
+## Regra principal: o agente se apresenta primeiro
+
+Toda nova conversa de pesquisa deve ser iniciada pelo Equilibra com apresentação transparente, antes de qualquer pergunta do roteiro. O agente informa expressamente que é uma inteligência artificial a serviço da empresa e que conduzirá uma pesquisa com o participante. Sua função é atuar como agente virtual responsável pela pesquisa; não deve se passar por pessoa ou funcionário humano, nem inventar cargo, identidade ou credenciais profissionais.
+
+A abertura fixa do servidor é:
+
+> Olá! Sou o Equilibra, um agente de inteligência artificial a serviço da sua empresa. Vou conduzir uma pesquisa com você sobre as condições de trabalho para apoiar a identificação de riscos ocupacionais. Sua participação é voluntária.
+
+Em seguida vêm o aviso de privacidade da pesquisa e as opções de participar, recusar e consultar ajuda ou dados. A primeira pergunta só aparece após essa apresentação e o aceite explícito. Uma mensagem inicial enviada pelo participante, inclusive `participar`, não dispensa a apresentação. Comandos de privacidade continuam disponíveis desde o primeiro contato. A retomada de uma pesquisa em andamento não precisa reiniciar o roteiro ou repetir a apresentação a cada resposta.
+
+O texto está em `backend/src/survey/introduction.ts`; é acrescentado pelo servidor, independentemente do modelo, de `focus` ou de instruções do participante. A persona declarativa em `skills/equilibra-nr1.skill.json` também registra essa prioridade. A humanização do tom nunca deve ocultar que se trata de IA.
+
+Para iniciar proativamente, o backend de mensageria chama `POST /api/surveys/<cycleId>/start` com `{"participantToken":"<token>"}` e o cabeçalho Bearer habitual. O retorno fornece `reply` e `started: true`, sem exigir mensagem anterior do participante. A integração deve enviar esse texto como primeiro contato, confirmar entrega e só então encaminhar respostas para `/messages`. O ciclo também fornece `openingMessage` como referência ao ser criado. O endpoint não envia mensagens sozinho; o transporte WhatsApp permanece separado e sujeito às regras de envio vigentes. Se a sessão já estiver pausada, encerrada, concluída ou com aceite, `/start` retorna `started: false` para evitar novo convite indevido.
+
 ## Os três diretórios de negócio
 
 ```text

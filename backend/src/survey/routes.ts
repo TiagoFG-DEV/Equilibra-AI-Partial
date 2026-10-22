@@ -4,6 +4,11 @@ import { Id } from './schema';
 import type { SurveyEngine } from './engine';
 export function surveyRouter(engine: SurveyEngine) {
  const router=Router();
+ router.post('/surveys/:id/start',async(req,res)=>{
+  const body=z.object({participantToken:z.string().regex(/^[a-f0-9]{64}$/)}).strict().safeParse(req.body);
+  if(!body.success){res.status(400).json({error:'Participante inválido'});return;}
+  try{res.json(await engine.start(req.params.id,body.data.participantToken));}catch{res.status(422).json({error:'Não foi possível iniciar a apresentação'});}
+ });
  router.post('/surveys',async(req,res)=>{
   const body=z.object({focusId:Id,expectedParticipants:z.number().int().min(1).max(10000)}).strict().safeParse(req.body);
   if(!body.success){res.status(400).json({error:'Pesquisa inválida'});return;}
