@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "npm start -w backend",
     "dev:backend": "npm run dev -w backend",
     "test": "npm run test -w backend",
     "build": "npm run build -w @model/core && npm run build -w backend",

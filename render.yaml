@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: equilibra-api
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci --include=dev && npm run db:generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /ready
+    disk:
+      name: equilibra-private-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: SURVEY_ROOT
+        value: ../skills
+      - key: SURVEY_OUTPUT_DIR
+        value: /var/data/survey
+      - key: SURVEY_API_KEY
+        generateValue: true
+      - key: SURVEY_ENCRYPTION_KEY
+        sync: false
+      - key: SURVEY_ALLOW_DEMO
+        value: "true"
+      - key: SURVEY_MIN_GROUP
+        value: "5"
+      - key: WHATSAPP_PAIRING_ENABLED
+        value: "false"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_CHAT_MODEL
+        sync: false

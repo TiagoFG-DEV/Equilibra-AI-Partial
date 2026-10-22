@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -16,9 +16,10 @@ RUN npm run build -w @model/core
 WORKDIR /app/backend
 RUN npx prisma generate && npm run build
 
-# Sandbox: o app bloqueia produção até a implementação dos controles documentados.
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV SURVEY_ROOT=/app/skills
+ENV SURVEY_OUTPUT_DIR=/var/data/survey
+ENV WHATSAPP_PAIRING_ENABLED=false
 EXPOSE 4000
 
 WORKDIR /app/backend

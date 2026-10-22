@@ -37,16 +37,12 @@ export function createGeminiProvider(cfg: GeminiConfig): AIProvider {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cfg.apiKey}`;
       const { systemInstruction, contents } = buildGeminiPayload(messages);
       const res = await fetch(url, {
+        signal: AbortSignal.timeout(15000),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents,
           systemInstruction,
-          tools: [
-            {
-              googleSearch: {}
-            }
-          ],
           generationConfig: {
             temperature: options?.temperature ?? 0.4,
             maxOutputTokens: options?.maxTokens,
@@ -76,6 +72,7 @@ export function createGeminiProvider(cfg: GeminiConfig): AIProvider {
       for (const text of texts) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${cfg.apiKey}`;
         const res = await fetch(url, {
+          signal: AbortSignal.timeout(15000),
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

@@ -9,7 +9,12 @@ config({ path: path.join(projectRoot, '.env') });
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  PORT: z.coerce.number().default(4000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  API_CLIENTS_JSON: z.string().optional(),
+  SURVEY_API_KEY: z.string().optional(),
+  SURVEY_OUTPUT_DIR: z.string().optional(),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+  WHATSAPP_PAIRING_ENABLED: z.enum(['true','false']).optional(),
   DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
   JWT_SECRET: z.string().min(16, "JWT_SECRET deve ter ao menos 16 caracteres").default("default_secret_equilibra_nr1_2026"),

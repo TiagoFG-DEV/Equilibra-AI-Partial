@@ -24,7 +24,7 @@ test('consentimento, formato, limite de aprofundamento, conclusão, privacidade 
   assert.equal((await send(token,'Condições de trabalho')).optional,undefined);
   assert.equal((await send(token,'pular')).finished,true);
  }
- const report=engine.report(cycle.cycleId);assert.equal(report.published,true);
+ const report=await engine.report(cycle.cycleId);assert.equal(report.published,true);
  const aggregate=JSON.stringify(report);assert.ok(!aggregate.includes('privado'));assert.ok(!aggregate.includes(cycle.participantTokens[0]));
  const saved=await fs.readFile(path.join(root,'survey',cycle.cycleId,'department.json'),'utf8');assert.ok(saved.includes('2.5'));
  const files=await fs.readdir(path.join(root,'survey',cycle.cycleId));assert.equal(files.length,6);
@@ -32,16 +32,19 @@ test('consentimento, formato, limite de aprofundamento, conclusão, privacidade 
 });
 test('recusa não conclui pesquisa e duplicidade não avança',async()=>{
  const root=path.resolve(__dirname,'../../../skills');
- const engine=new SurveyEngine(root,{name:'offline',chat:async()=>{throw Error();},stream:async function*(){},embeddings:async()=>[]});
+ const output=await fs.mkdtemp(path.join(os.tmpdir(),'equilibra-refusal-'));
+ const engine=new SurveyEngine(root,{name:'offline',chat:async()=>{throw Error();},stream:async function*(){},embeddings:async()=>[]},output);
  const c=await engine.create('exemplo',1),t=c.participantTokens[0];
  await engine.message(c.cycleId,t,'a','sair');
- assert.deepEqual(await engine.message(c.cycleId,t,'a','participar'),{duplicate:true});
- assert.equal(engine.report(c.cycleId).complete,false);
+ assert.equal((await engine.message(c.cycleId,t,'a','sair') as any).duplicate,true);
+ await assert.rejects(engine.message(c.cycleId,t,'a','participar'),/outro conteúdo/);
+ assert.equal((await engine.report(c.cycleId)).complete,false);
 });
 test('apresentação fixa precede aceite e pode ser iniciada sem mensagem do participante',async()=>{
  process.env.SURVEY_ENCRYPTION_KEY='a'.repeat(64);process.env.SURVEY_ALLOW_DEMO='true';
  let calls=0;
- const engine=new SurveyEngine(path.resolve(__dirname,'../../../skills'),{name:'test',chat:async()=>{calls++;return '{}';},stream:async function*(){},embeddings:async()=>[]});
+ const output=await fs.mkdtemp(path.join(os.tmpdir(),'equilibra-intro-'));
+ const engine=new SurveyEngine(path.resolve(__dirname,'../../../skills'),{name:'test',chat:async()=>{calls++;return '{}';},stream:async function*(){},embeddings:async()=>[]},output);
  const c=await engine.create('exemplo',2),[a,b]=c.participantTokens;
  assert.match(c.openingMessage,/assistente virtual do Equilibra e utilizo inteligência artificial/);
  assert.ok(!c.openingMessage.includes('a serviço da sua empresa'));

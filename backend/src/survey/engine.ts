@@ -1,29 +1,74 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import path from 'node:path';
-import { randomUUID, randomBytes, createCipheriv, createHash } from 'node:crypto';
+import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { z } from 'zod';
 import { Focus, Knowledge, type FocusType, type KnowledgeType } from './schema';
 import type { AIProvider } from '../providers/ai-provider.types';
 import { AI_INTRODUCTION, openingMessage } from './introduction';
+import { atomicWrite, decryptJson, encryptJson } from './storage';
+import { ApiError } from '../api/errors';
 type Row = { questionId: string; theme: string; satisfaction: number | null; riskIds: string[]; analysisStatus: string };
-type Session = { introduced?: boolean; consentAt?: string; index: number; rows: Row[]; counts: Record<string, number>; pending: string[]; done: boolean; paused: boolean; revoked: boolean; messages: Set<string> };
-type Cycle = { id: string; focus: FocusType; knowledge: KnowledgeType[]; expected: number; sessions: Map<string, Session>; aggregate?: unknown; tail: Promise<unknown> };
+type Receipt = { hash: string; response: unknown };
+type Session = { introduced?: boolean; consentAt?: string; index: number; rows: Row[]; counts: Record<string, number>; pending: string[]; done: boolean; paused: boolean; revoked: boolean; messages: Set<string>; receipts: Map<string,Receipt> };
+type Cycle = { id: string; focus: FocusType; knowledge: KnowledgeType[]; expected: number; sessions: Map<string, Session>; aggregate?: unknown };
 const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export class SurveyEngine {
  private cycles = new Map<string,Cycle>();
  private key: Buffer;
  private k: number;
- constructor(private root: string, private provider: AIProvider) {
+ private outputRoot: string;
+ private tail: Promise<unknown> = Promise.resolve();
+ private loading?: Promise<void>;
+ private creationReceipts = new Map<string,Receipt>();
+ constructor(private root: string, private provider: AIProvider, outputRoot?: string) {
+  this.outputRoot=outputRoot||path.join(root,'survey');
   const key = process.env.SURVEY_ENCRYPTION_KEY || '';
   if (!/^[a-f0-9]{64}$/i.test(key)) throw new Error('SURVEY_ENCRYPTION_KEY: hexadecimal de 32 bytes');
   this.key = Buffer.from(key,'hex'); this.k = Number(process.env.SURVEY_MIN_GROUP || 5);
   if (!Number.isInteger(this.k) || this.k < 5) throw new Error('SURVEY_MIN_GROUP deve ser >= 5');
  }
- async create(focusId: string, expected: number) {
+ private snapshot() {
+  return {version:1,creationReceipts:[...this.creationReceipts],cycles:[...this.cycles.values()].map(c=>({...c,sessions:[...c.sessions].map(([token,s])=>[token,{...s,messages:[...s.messages],receipts:[...s.receipts]}])}))};
+ }
+ private restore(snapshot: any) {
+  if(snapshot.version!==1||!Array.isArray(snapshot.cycles)||!Array.isArray(snapshot.creationReceipts))throw new Error('Versão de estado inválida');
+  this.creationReceipts=new Map(snapshot.creationReceipts);
+  this.cycles=new Map(snapshot.cycles.map((c:any)=>[c.id,{...c,focus:Focus.parse(c.focus),knowledge:c.knowledge.map((k:unknown)=>Knowledge.parse(k)),sessions:new Map(c.sessions.map(([token,s]:[string,any])=>[token,{...s,messages:new Set(s.messages),receipts:new Map(s.receipts)}]))}]));
+ }
+ async initialize() {
+  if(!this.loading)this.loading=(async()=>{
+   await fs.mkdir(this.outputRoot,{recursive:true,mode:0o700});
+   await fs.access(this.outputRoot,constants.W_OK);
+   try{this.restore(decryptJson(await fs.readFile(path.join(this.outputRoot,'.state.enc.json'),'utf8'),this.key));}
+   catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw new Error('Falha ao recuperar estado: verifique a chave e o disco persistente');}
+  })();
+  return this.loading;
+ }
+ private mutate<T>(action:()=>Promise<T>):Promise<T> {
+  const work=this.tail.then(async()=>{
+   await this.initialize();const before=JSON.stringify(this.snapshot());
+   try{const result=await action();await atomicWrite(path.join(this.outputRoot,'.state.enc.json'),encryptJson(this.snapshot(),this.key));return result;}
+   catch(error){this.restore(JSON.parse(before));throw error;}
+  });
+  this.tail=work.catch(()=>undefined);return work;
+ }
+ async drain(){await this.tail;}
+ async create(focusId: string, expected: number, idempotencyKey?:string) {
+  return this.mutate(async()=>{
+   const hash=createHash('sha256').update(JSON.stringify({focusId,expected})).digest('hex');
+   const cached=idempotencyKey?this.creationReceipts.get(idempotencyKey):undefined;
+   if(cached){if(cached.hash!==hash)throw new ApiError(409,'IDEMPOTENCY_CONFLICT','Chave de idempotência usada com outro conteúdo');return cached.response as Awaited<ReturnType<SurveyEngine['createCycle']>>;}
+   const result=await this.createCycle(focusId,expected);
+   if(idempotencyKey)this.creationReceipts.set(idempotencyKey,{hash,response:result});
+   return result;
+  });
+ }
+ private async createCycle(focusId: string, expected: number) {
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(focusId) || !Number.isInteger(expected) || expected < 1 || expected > 10000) throw new Error('Entrada inválida');
   const focus = Focus.parse(JSON.parse(await fs.readFile(path.join(this.root,'focus',focusId+'.json'),'utf8')));
   const demo = process.env.SURVEY_ALLOW_DEMO === 'true';
-  if (!focus.approved && !demo) throw new Error('Instrumento não aprovado');
+  if (!focus.approved && !demo) throw new ApiError(422,'UNAPPROVED_SURVEY','Instrumento não aprovado');
   const knowledge: KnowledgeType[] = [];
   for (const file of await fs.readdir(path.join(this.root,'database'))) {
    if (!file.endsWith('.json')) continue;
@@ -31,25 +76,29 @@ export class SurveyEngine {
    if (item.approved || demo) knowledge.push(item);
   }
   const riskIds = knowledge.flatMap(k => k.risks.map(r => r.id));
-  if (new Set(riskIds).size !== riskIds.length) throw new Error('IDs de risco repetidos');
+  if (new Set(riskIds).size !== riskIds.length) throw new ApiError(422,'INVALID_KNOWLEDGE','IDs de risco repetidos na base');
   const id = randomUUID(); const sessions = new Map<string,Session>();
-  for (let i=0;i<expected;i++) sessions.set(randomBytes(32).toString('hex'),{ index:0, rows:[],counts:{},pending:[],done:false,paused:false,revoked:false,messages:new Set() });
-  this.cycles.set(id,{id,focus,knowledge,expected,sessions,tail:Promise.resolve()});
+  for (let i=0;i<expected;i++) sessions.set(randomBytes(32).toString('hex'),{ index:0, rows:[],counts:{},pending:[],done:false,paused:false,revoked:false,messages:new Set(),receipts:new Map() });
+  this.cycles.set(id,{id,focus,knowledge,expected,sessions});
   return {cycleId:id,participantTokens:[...sessions.keys()],privacyNotice:focus.privacyNotice,openingMessage:openingMessage(focus.privacyNotice),demo};
  }
  async start(id: string, token: string) {
-  const c=this.cycles.get(id); if(!c)throw new Error('Ciclo inexistente');
-  const work=c.tail.then(()=>{
-   const s=c.sessions.get(token);if(!s)throw new Error('Participante inexistente');
+  return this.mutate(async()=>{
+   const c=this.findCycle(id);
+   const s=c.sessions.get(token);if(!s)throw new ApiError(404,'NOT_FOUND','Participação não encontrada');
    if(s.revoked||s.paused||s.done||s.consentAt)return {started:false};
    s.introduced=true;
    return {reply:openingMessage(c.focus.privacyNotice),started:true};
   });
-  c.tail=work.catch(()=>undefined);return work;
  }
  async message(id: string, token: string, messageId: string, text: string) {
-  const c = this.cycles.get(id); if (!c) throw new Error('Ciclo inexistente');
-  const work = c.tail.then(() => this.process(c,token,messageId,text)); c.tail=work.catch(()=>undefined); return work;
+  return this.mutate(async()=>{
+   const c=this.findCycle(id),s=c.sessions.get(token);
+   if(!s)throw new ApiError(404,'NOT_FOUND','Participação não encontrada');
+   const hash=createHash('sha256').update(text).digest('hex'),cached=s.receipts.get(messageId);
+   if(cached){if(cached.hash!==hash)throw new ApiError(409,'IDEMPOTENCY_CONFLICT','messageId usado com outro conteúdo');return {...cached.response as object,duplicate:true};}
+   const result=await this.process(c,token,messageId,text);s.receipts.set(messageId,{hash,response:result});return result;
+  });
  }
  private question(c: Cycle,s: Session) {
   const q=c.focus.questions[s.index];
@@ -123,14 +172,12 @@ export class SurveyEngine {
  }
  private async advance(c: Cycle,s: Session,token: string): Promise<unknown> {
   if(s.index<c.focus.questions.length) return {reply:this.question(c,s),finished:false};
-  const dir=path.join(this.root,'survey',c.id);await fs.mkdir(dir,{recursive:true,mode:0o700});
+  const dir=path.join(this.outputRoot,c.id);await fs.mkdir(dir,{recursive:true,mode:0o700});
   const report={schemaVersion:1,focusVersion:c.focus.version,methodology:c.focus.methodology,knowledgeVersions:c.knowledge.map(k=>({id:k.id,version:k.version})),riskCatalog:c.knowledge.flatMap(k=>k.risks.map(r=>({id:r.id,label:r.label,theme:k.theme,source:k.source}))),aiProvider:this.provider.name,
    disclaimer:'Análise de inteligência artificial e regras. Não constitui diagnóstico ou classificação oficial da NR-1.',table:s.rows,
    generalAnalysis:`Síntese de IA e regras: ${s.rows.length} perguntas respondidas; ${s.rows.filter(r=>r.riskIds.length).length} com indícios cadastrados. Textos não recebem nota inferida.`};
-  const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);
-  const encrypted=Buffer.concat([cipher.update(JSON.stringify(report),'utf8'),cipher.final()]);
   const file=createHash('sha256').update(token).digest('hex')+'.json';
-  await fs.writeFile(path.join(dir,file),JSON.stringify({encryption:'AES-256-GCM',iv:iv.toString('hex'),tag:cipher.getAuthTag().toString('hex'),ciphertext:encrypted.toString('base64')}),{mode:0o600});
+  await atomicWrite(path.join(dir,file),encryptJson(report,this.key));
   const completed=[...c.sessions.values()].filter(x=>x.done||x===s);
   if(completed.length===c.expected&&completed.length>=this.k) {
    const table=c.focus.questions.map(q=>{
@@ -139,10 +186,11 @@ export class SurveyEngine {
      riskIds:[...new Set(rows.flatMap(r=>r.riskIds))].filter(id=>rows.filter(r=>r.riskIds.includes(id)).length>=this.k)};
    });
    c.aggregate={...report,table,generalAnalysis:'Síntese agregada de IA e regras. Médias de notas declaradas e indícios da base aprovada. Categoria suprimida não significa ausência de risco.'};
-   await fs.writeFile(path.join(dir,'department.json'),JSON.stringify(c.aggregate,null,2),{mode:0o600});
+   await atomicWrite(path.join(dir,'department.json'),JSON.stringify(c.aggregate,null,2));
   }
   s.done=true;
   return {reply:'Obrigada pela participação. Relato sintetizado sem reprodução integral. O RH recebe somente resultados coletivos protegidos.',finished:true};
  }
- report(id: string) {const c=this.cycles.get(id);if(!c)throw new Error('Ciclo inexistente');return {complete:[...c.sessions.values()].filter(s=>s.done).length===c.expected,published:Boolean(c.aggregate),report:c.aggregate||null};}
+ private findCycle(id:string){const c=this.cycles.get(id);if(!c)throw new ApiError(404,'NOT_FOUND','Pesquisa não encontrada');return c;}
+ async report(id: string) {await this.initialize();await this.tail;const c=this.findCycle(id);return {complete:[...c.sessions.values()].filter(s=>s.done).length===c.expected,published:Boolean(c.aggregate),report:c.aggregate||null};}
 }

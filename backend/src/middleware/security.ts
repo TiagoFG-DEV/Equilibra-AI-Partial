@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import type { AppEnv } from "../config/env";
+import { ApiError } from '../api/errors';
 
 export function securityHeaders() {
   return helmet({
@@ -14,8 +15,12 @@ export function securityHeaders() {
 export function corsMiddleware(env: AppEnv) {
   const origins = env.CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean);
   return cors({
-    origin: env.NODE_ENV === "production" ? origins : true,
-    credentials: true,
+    origin: (origin,callback)=>{
+      if(!origin||origins.includes(origin))callback(null,true);
+      else callback(new ApiError(403,'ORIGIN_NOT_ALLOWED','Origem não permitida'));
+    },
+    credentials: false,
+    exposedHeaders: ['X-Request-Id','Retry-After'],
   });
 }
 

@@ -10,6 +10,7 @@ export function createApiRateLimiter(redis: Redis | null, env: AppEnv) {
       limit: env.RATE_LIMIT_MAX,
       standardHeaders: true,
       legacyHeaders: false,
+      handler: (_req,res)=>{res.status(429).json({error:{code:'RATE_LIMITED',message:'Limite de requisições atingido; respeite Retry-After',requestId:res.locals.requestId}});},
       store: new RedisStore({
         sendCommand: ((...args: string[]) => (redis.call as any)(...args)) as any,
       }),
@@ -21,5 +22,6 @@ export function createApiRateLimiter(redis: Redis | null, env: AppEnv) {
     limit: env.RATE_LIMIT_MAX,
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (_req,res)=>{res.status(429).json({error:{code:'RATE_LIMITED',message:'Limite de requisições atingido; respeite Retry-After',requestId:res.locals.requestId}});},
   });
 }

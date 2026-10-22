@@ -44,6 +44,7 @@ export function createOpenAICompatibleProvider(cfg: OpenAICompatibleConfig): AIP
 
     async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
       const res = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        signal: AbortSignal.timeout(15000),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,6 +71,7 @@ export function createOpenAICompatibleProvider(cfg: OpenAICompatibleConfig): AIP
 
     async *stream(messages: ChatMessage[], options?: ChatOptions): AsyncIterable<string> {
       const res = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        signal: AbortSignal.timeout(15000),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,6 +94,7 @@ export function createOpenAICompatibleProvider(cfg: OpenAICompatibleConfig): AIP
 
     async embeddings(texts: string[]): Promise<number[][]> {
       const res = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/embeddings`, {
+        signal: AbortSignal.timeout(15000),
         method: "POST",
         headers: {
           "Content-Type": "application/json",
