@@ -357,3 +357,9 @@ Estado observado nesta verificação, não garantia contínua de disponibilidade
 | Próxima validação | Configurar banco e variáveis no workspace confirmado, fazer deploy e testar ciclo fictício completo e recuperação remota |
 
 Não há credenciais neste registro. A presença de um deploy live ou HTTP 200 na página inicial não comprova conexão com banco, autenticação válida nem operação da pesquisa. Atualizar este registro após cada etapa remota concluída, preservando a distinção entre configuração pendente, teste local e teste remoto.
+
+### Atualização após confirmação do workspace
+
+O usuário confirmou o workspace `My Workspace` (`tea-d87jpf9kh4rs73aniou0`). Foi solicitada e aceita pelo Render uma atualização por merge, preservando as variáveis não mencionadas: autenticação, cifragem, credencial do provedor, Node 22, modo postgres, referências, modo demonstrativo, grupo mínimo, pareamento desligado e proxy. Valores secretos não são registrados aqui. A atualização iniciou um deploy automaticamente; não se solicitou um segundo deploy manual.
+
+`SURVEY_DATABASE_URL` permanece pendente porque a verificação seguinte do catálogo de plugins informou Neon não instalado e não disponibilizou ferramentas de banco, apesar da confirmação de reconexão do usuário. Isso não altera a autorização fornecida; é uma limitação do acesso disponível nessa sessão. Não foi substituído Neon por outro provedor nem contratado plano pago. A API deve permanecer em diagnóstico até a conexão privada ser configurada e a recuperação validada. As origens CORS do consumidor ainda precisam ser confirmadas antes da integração pelo navegador.
