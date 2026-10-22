@@ -29,6 +29,83 @@ Os três diretórios de negócio ficam dentro de `skills`, preservando a arquite
 
 O processo nunca escreve em `database` ou `focus`. Para garantir consulta somente, monte esses diretórios como volumes read-only e use uma identidade de serviço sem permissão de escrita. A convenção no código sozinha não substitui permissões do sistema operacional. `survey` deve ser um volume privado, fora do repositório publicado e dos diretórios estáticos. Os arquivos gerados estão no `.gitignore`.
 
+## Organização completa das pastas
+
+A estrutura abaixo distingue código-fonte, arquivos de referência e diretórios gerados durante o desenvolvimento. Pastas geradas ou locais podem não existir em um clone novo.
+
+```text
+Equilibra-AI-Partial/
+├── backend/
+│   ├── src/
+│   │   ├── config/         Ambiente, caminhos e testes de resolução
+│   │   ├── lib/            Clientes e utilitários de infraestrutura
+│   │   ├── middleware/     Proteções HTTP e limites de requisições
+│   │   ├── providers/      Adaptadores dos provedores de IA
+│   │   ├── routes/         Rotas HTTP, incluindo pareamento local
+│   │   ├── services/       Serviços de aplicação e conexão WhatsApp
+│   │   ├── survey/         Motor de pesquisa, schemas, rotas e testes
+│   │   ├── app.ts          Montagem da aplicação e rotas ativas
+│   │   └── index.ts        Inicialização e encerramento do servidor
+│   ├── public/
+│   │   ├── conectar-whatsapp.html
+│   │   ├── pairing.css
+│   │   └── pairing.js
+│   ├── prisma/             Schema e migrações da infraestrutura legada
+│   ├── dist/               JavaScript compilado; gerado e ignorado
+│   ├── wa_pairing_session/ Credenciais locais de vínculo; ignoradas
+│   ├── .env.example        Modelo versionado das configurações
+│   ├── .env                Configuração local opcional; ignorada
+│   ├── Dockerfile          Construção do container de desenvolvimento
+│   ├── package.json        Dependências e comandos do backend
+│   └── tsconfig.json       Configuração de compilação TypeScript
+├── packages/
+│   └── core/
+│       ├── src/            Tipos, schemas e regras compartilhadas
+│       ├── dist/           Compilação gerada e ignorada
+│       ├── package.json
+│       └── tsconfig.json
+├── skills/
+│   ├── database/           Conhecimento de consulta e taxonomia
+│   ├── focus/              Definições JSON das pesquisas
+│   ├── survey/             Resultados privados gerados pelo motor
+│   └── equilibra-nr1.skill.json
+├── .old/                   Material arquivado local; ignorado
+├── node_modules/           Dependências instaladas; ignoradas
+├── .env                    Configuração local da raiz; ignorada
+├── .gitignore              Regras de exclusão do versionamento
+├── .dockerignore           Exclusões do contexto de construção Docker
+├── package.json            Workspaces e comandos gerais do projeto
+├── package-lock.json       Versões resolvidas das dependências
+└── README.md               Arquitetura, funcionamento e integração
+```
+
+### Responsabilidade de cada área
+
+| Diretório | Responsabilidade | Como manter |
+| --- | --- | --- |
+| `skills/database` | Referências, categorias, gatilhos e aprofundamentos aprovados | Desenvolvedores alimentam e versionam; o motor apenas consulta |
+| `skills/focus` | Ordem, obrigatoriedade e formato das perguntas de cada pesquisa | Preparar JSON conforme schema, registrar fonte e versão |
+| `skills/survey` | Sínteses individuais cifradas e relatório coletivo | Gerado pelo serviço; somente `.gitkeep` entra no Git |
+| `backend/src/survey` | Máquina de estados, interpretação e conclusão das pesquisas | Alterações de regras devem ser acompanhadas de verificação dos contratos |
+| `backend/src/config` | Carregamento de ambiente e resolução de caminhos | Centralizar mudanças de localização em `paths.ts` |
+| `backend/src/providers` | Comunicação com os modelos de IA | Preservar a interface `AIProvider` ao adicionar provedores |
+| `backend/src/routes` | Endpoints da aplicação e do pareamento | Uma rota só fica ativa quando montada em `app.ts` |
+| `backend/src/services` | Serviços, incluindo o pareamento dedicado | Serviços legados não são ativados apenas por estarem nesta pasta |
+| `backend/src/middleware` | Segurança HTTP, CORS e rate limiting | Aplicar na montagem da API, sem substituir autorização de negócio |
+| `backend/src/lib` | Integrações de infraestrutura, como Redis e Prisma | Não guardar segredos nem arquivos de resposta aqui |
+| `backend/public` | Tela mínima de conexão com WhatsApp | Não colocar referências privadas, resultados ou credenciais nessa pasta |
+| `backend/prisma` | Modelagem e migrações preexistentes | O motor atual de pesquisa não persiste suas sessões nesse banco |
+| `packages/core` | Contratos reutilizáveis entre módulos | Compilar antes do backend com o comando de build da raiz |
+| `.old` | Histórico de desenvolvimento e material desativado | Manter apenas localmente; não importar código nem carregar configuração dessa pasta |
+
+### Onde colocar novos arquivos
+
+Uma nova referência ocupacional pertence a `skills/database`; uma nova pesquisa pertence a `skills/focus`. Resultados de execução pertencem exclusivamente a `skills/survey`. Os nomes curtos `database`, `focus` e `survey` usados no restante deste documento se referem a esses subdiretórios dentro de `skills`.
+
+Novas regras de condução ficam em `backend/src/survey`, adaptações de provedores em `backend/src/providers` e integrações de transporte em `backend/src/services` com as rotas necessárias em `backend/src/routes`. Os testes ficam junto ao módulo correspondente, como `engine.test.ts` e `paths.test.ts`; seus comandos são registrados em `backend/package.json`.
+
+Não edite `dist` manualmente: ele é recriado por `npm run build`. Não versione `node_modules`, `.env`, credenciais de WhatsApp, conteúdo gerado em `skills/survey` ou `.old`. Para iniciar outro ambiente, utilize os arquivos versionados e `backend/.env.example`, sem depender dos arquivos locais arquivados.
+
 ## Fontes oficiais e significado de obrigatório
 
 A [página oficial da NR-1 no MTE](https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/comissao-tripartite-partitaria-permanente/normas-regulamentadora/normas-regulamentadoras-vigentes/nr-1) reúne norma, guias e perguntas e respostas. A NR-1 não estabelece questionário único obrigatório. Perguntas frequentes sobre a norma não equivalem a itens de um instrumento de pesquisa validado.
