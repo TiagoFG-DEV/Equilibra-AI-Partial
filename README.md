@@ -10,7 +10,9 @@ Toda nova conversa de pesquisa deve ser iniciada pelo Equilibra com apresentaç�
 
 A abertura fixa do servidor é:
 
-> Olá! Sou o assistente virtual do Equilibra e utilizo inteligência artificial. Vou conversar com você sobre como é sua rotina de trabalho, em uma pesquisa para ajudar a identificar o que pode melhorar no ambiente de trabalho. Sua participação é voluntária.
+> Olá! Sou o assistente virtual do Equilibra e utilizo inteligência artificial. Vou conversar com você sobre sua rotina de trabalho e como ela pode afetar sua saúde e bem-estar. Sua participação é voluntária e suas respostas são tratadas de forma confidencial. Esta pesquisa contribui para melhorar seu ambiente e suas condições de trabalho. Responda com sinceridade, sem informar nomes ou outros dados que identifiquem pessoas.
+
+A abertura não promete participação completamente anônima: tokens de convite e credenciais de mensageria podem permitir vinculação no domínio técnico. Confidencialidade e pseudonimização não são anonimização irreversível. A menção à saúde é limitada à relação com o trabalho; o roteiro não deve solicitar histórico clínico, diagnósticos ou detalhes de saúde pessoal sem finalidade e base apropriadas.
 
 Em seguida vêm o aviso de privacidade da pesquisa e as opções de participar, recusar e consultar ajuda ou dados. A primeira pergunta só aparece após essa apresentação e o aceite explícito. Uma mensagem inicial enviada pelo participante, inclusive `participar`, não dispensa a apresentação. Comandos de privacidade continuam disponíveis desde o primeiro contato. A retomada de uma pesquisa em andamento não precisa reiniciar o roteiro ou repetir a apresentação a cada resposta.
 

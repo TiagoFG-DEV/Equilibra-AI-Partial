@@ -51,7 +51,9 @@ test('apresentação fixa precede aceite e pode ser iniciada sem mensagem do par
  const question=await engine.message(c.cycleId,a,'second','participar') as any;
  assert.match(question.reply,/Como você avalia/);
  const invite=await engine.start(c.cycleId,b);
- assert.match((invite as any).reply,/como é sua rotina de trabalho/);
+ assert.match((invite as any).reply,/sua rotina de trabalho e como ela pode afetar sua saúde e bem-estar/);
+ assert.match((invite as any).reply,/voluntária.*confidencial/);
+ assert.ok(!(invite as any).reply.includes('completamente anônima'));
  assert.match((await engine.message(c.cycleId,b,'accept','participar') as any).reply,/Como você avalia/);
  assert.deepEqual(await engine.start(c.cycleId,b),{started:false});
  assert.equal(calls,0);
