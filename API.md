@@ -2,6 +2,8 @@
 
 Este é o manual operacional da implementação atual. A arquitetura e as regras do produto estão no [README](README.md); o contrato de máquina está em `/openapi.json`, gerado por `backend/src/api/openapi.ts`. Os exemplos abaixo usam dados fictícios e a pesquisa `exemplo` do repositório.
 
+A modelagem conceitual/lógica/física, o dicionário de dados SQL e dos payloads cifrados, os requisitos de banco, o inventário Prisma legado e o checklist da documentação final estão em [DATABASE.md](DATABASE.md). Esse documento integra a entrega do projeto e deve ser atualizado quando contratos de persistência ou procedimentos operacionais mudarem.
+
 ## Atualização de implantação: Render Free + banco externo
 
 O Blueprint atual usa Render Free com PostgreSQL externo. As instruções de arquivos/volume neste manual se aplicam à alternativa `SURVEY_STORAGE=file`. Para manter o servidor gratuito, siga esta configuração em vez de anexar disco:
@@ -89,6 +91,7 @@ Publicar com `NODE_ENV=production` configura a execução técnica no servidor. 
 
 ```text
 API.md                              Este manual
+DATABASE.md                         Modelagem, dicionário e requisitos do banco
 README.md                           Arquitetura e regras de negócio
 render.yaml                         Render Free com PostgreSQL externo
 backend/.env.example                Referência de configuração

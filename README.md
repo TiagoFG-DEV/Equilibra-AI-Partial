@@ -2,6 +2,8 @@
 
 **Documentação de uso da API:** consulte [API.md](API.md) para o checklist completo, instalação local, todas as variáveis, publicação no Render, integração com Vercel, endpoints, exemplos executáveis e solução de problemas. O contrato OpenAPI está em `/openapi.json` quando o servidor estiver rodando.
 
+**Documentação do banco:** consulte [DATABASE.md](DATABASE.md) para modelagem conceitual, lógica e física, dicionário completo das tabelas e payloads cifrados, inventário Prisma legado, requisitos de implantação, backup, segurança e checklist da documentação final. README, API.md e DATABASE.md compõem a documentação de entrega e devem acompanhar as mudanças do código.
+
 ## Implantação atual: Render Free com PostgreSQL externo
 
 O caminho padrão do `render.yaml` agora é **Render Free + PostgreSQL externo**, como o plano gratuito do Neon dentro das cotas dele. Configure `SURVEY_STORAGE=postgres` e `SURVEY_DATABASE_URL` com a conexão privada obtida no provedor. Nesse modo não é necessário disco pago: snapshots, recibos e relatórios são gravados cifrados em tabelas PostgreSQL. A aplicação cria somente `equilibra_state` e `equilibra_artifacts`; o usuário de banco precisa de permissão para criá-las. Não executa as migrações do módulo Prisma legado para armazenar pesquisas.
@@ -209,6 +211,7 @@ Equilibra-AI-Partial/
 ├── package-lock.json       Versões resolvidas das dependências
 ├── render.yaml             Render Free com PostgreSQL externo
 ├── API.md                  Manual completo de instalação, operação e integração HTTP
+├── DATABASE.md             Modelagem, dicionário de dados e operação do banco
 └── README.md               Arquitetura, funcionamento e integração
 ```
 
